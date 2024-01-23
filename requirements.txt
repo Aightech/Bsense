@@ -1,0 +1,5 @@
+# Dependencies for the Bsense Project
+# Example:
+# tkinter
+# customtkinter
+# pyserial

@@ -1,0 +1,61 @@
+{
+    "Type": "Sequence",
+    "Repeat": 1,
+    "Content": [
+        {
+            "Type": "Sequence",
+            "Repeat": 15,
+            "Content": [
+                {
+                    "Type": "stimulus",
+                    "Content": [
+                        {
+                            "Type": "Vib2",
+                            "Amplitude": 1,
+                            "Deviation": 0
+                        },
+                        {
+                            "Type": "Buzzer",
+                            "Amplitude": 1,
+                            "Deviation": 0
+                        }
+                    ]
+                },
+                {
+                    "Type": "Delay",
+                    "Duration": 5,
+                    "Deviation": 0
+                }
+            ]
+        },
+        {
+            "Type": "Dropout_sequence",
+            "Repeat": 5,
+            "Number_drop": 1,
+            "Content": [
+                {
+                    "Type": "stimulus",
+                    "Content": [
+                        {
+                            "Type": "Vib2",
+                            "Amplitude": 1,
+                            "Deviation": 0
+                        }
+                    ]
+                },
+                {
+                    "Type": "Delay",
+                    "Duration": 5,
+                    "Deviation": 0
+                }
+            ],
+            "Dropout_content": [
+                {
+                    "Type": "Delay",
+                    "Duration": 5,
+                    "Deviation": 0
+                }
+            ]
+        }
+    ]
+}
