@@ -115,7 +115,7 @@ class BsenseGUI(ctk.CTk):
         # call back function for the experiment
         # get the index of the selected item and update treeview
         #set the new active item in the treeview
-        print("new event" + str(event))
+        #print("new event" + str(event))
         self.exp_treeview.selection_set(self.exp_treeview.get_children()[self.exp.current_idx])
         
     def create_log_frame(self):
@@ -142,7 +142,7 @@ class BsenseGUI(ctk.CTk):
         self.connection_label = ctk.CTkLabel(self.device_frame, text="Device: ")
         self.connection_label.pack(side=tk.LEFT, padx=5, pady=0)
         self.connection_entry = ctk.CTkEntry(self.device_frame)
-        self.connection_entry.insert(0, "COM3")
+        self.connection_entry.insert(0, "/dev/ttyACM0")
         self.connection_entry.pack(side=tk.LEFT, padx=10, pady=10, expand=True, fill=tk.X)
         self.connection_button = ctk.CTkButton(self.device_frame, text="Connect", command=self.on_button_connect_click, width=10)
         self.connection_button.pack(side=tk.LEFT, padx=10, pady=10)
@@ -169,7 +169,7 @@ class BsenseGUI(ctk.CTk):
         self.subject_entry.pack(side=tk.LEFT, padx=0, pady=0, expand=True, fill=tk.X)
         
         #add validation button
-        self.validation_button = ctk.CTkButton(self.subject_frame, text="✔", width=10, command=self.on_button_validate_user_click)#, state="disabled", fg_color="grey")
+        self.validation_button = ctk.CTkButton(self.subject_frame, text="✔", width=10, command=self.on_button_validate_user_click, state="disabled", fg_color="grey")
         self.validation_button.pack(side=tk.LEFT, padx=10, pady=5)
         
 
@@ -208,12 +208,11 @@ class BsenseGUI(ctk.CTk):
         self.command_buttons_frame.pack(side=tk.TOP, fill=tk.X, expand=True, padx=10, pady=5)
         self.command_GO_button = ctk.CTkButton(self.command_buttons_frame, text="▶", command=self.on_button_GO_click, width=10, state="disabled", fg_color="grey")
         self.command_GO_button.pack(side=tk.LEFT, padx=10, pady=10, expand=True, fill=tk.X)
-        self.command_PAUSE_button = ctk.CTkButton(self.command_buttons_frame, text="⏸", command=self.on_button_PAUSE_click, width=10, state="disabled", fg_color="grey")
+        self.command_PAUSE_button = ctk.CTkButton(self.command_buttons_frame, text="||", command=self.on_button_PAUSE_click, width=10, state="disabled", fg_color="grey")
         self.command_PAUSE_button.pack(side=tk.LEFT, padx=10, pady=10, expand=True, fill=tk.X)
         self.command_STOP_button = ctk.CTkButton(self.command_buttons_frame, text="■", command=self.on_button_STOP_click, width=10, state="disabled", fg_color="grey")
         self.command_STOP_button.pack(side=tk.LEFT, padx=10, pady=10, expand=True, fill=tk.X)
         
-        print("connect button fg_color: ", self.connection_button._fg_color)
         
         #create a frame for exp_comments
         self.comments_frame = ctk.CTkFrame(self.control_frame, width=10)
@@ -238,6 +237,7 @@ class BsenseGUI(ctk.CTk):
     def on_combo_select(self, event):
         selected_exp = self.exp_combo.get()
         self.add_log("Experiment selected: " + selected_exp)
+        print("selected exp: " + selected_exp)
         if selected_exp == "Experiment Custom" and self.current_exp_index < len(self.exp_rules):#if previous experiment was not custom
             #increase the size of the window
             self.update_idletasks()
@@ -307,7 +307,7 @@ class BsenseGUI(ctk.CTk):
         self.exp_treeview.delete(*self.exp_treeview.get_children())
         #add the items
         for i in range(len(sequence)):
-            self.exp_treeview.insert("", i, text=str(i), values=(sequence[i][1], round(sequence[i][2], 2)))
+            self.exp_treeview.insert("", i, text=str(i), values=(sequence[i][1], round(sequence[i][2][1], 2)))
         #update the treeview
         self.exp_treeview.update_idletasks()
         if len(sequence) > 0:

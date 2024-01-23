@@ -69,9 +69,8 @@ class Experiment:
                 self.running = False
                 self.log_cb("End of experiment")
             if self.running:
-                print("hey" + str(self.current_idx))
                 self.event_cb(self.current_idx)
-                self.sequence[self.current_idx][0]()
+                self.sequence[self.current_idx][0](self.sequence[self.current_idx][2])
                 if self.running:#check if the experiment is still running and was not stopped during the execution of the event
                     self.current_idx += 1
             else:
@@ -102,13 +101,25 @@ class Experiment:
         arr = []
         for fb in rules["Content"]:
             if fb["Type"] == "Vib1" or fb["Type"] == "Vib2" or fb["Type"] == "Buzzer":
-                signal = fb["Amplitude"]+fb["Deviation"]*(1-2*random.random())
-                arr.append([lambda: self.__stimulus(signal), fb["Type"], signal])
+                source = "v" if fb["Type"] == "Vib1" else "w" if fb["Type"] == "Vib2" else "b"
+                val = fb["Amplitude"]+fb["Deviation"]*(1-2*random.random())
+                val2 = 0
+                dt = 0
+                #check if "tone" is in the keys of the dict
+                if fb["Type"] == "Buzzer":
+                    val2 = 0.5
+                    dt = 500
+                    if "Tone" in fb:
+                        val2 = fb["Tone"]+fb["Deviation"]*(1-2*random.random())
+                    if "Duration" in fb:
+                        dt = fb["Duration"]+fb["Deviation"]*(1-2*random.random())
+                signal = (source, val, val2, dt)
+                arr.append([self.__stimulus, fb["Type"], signal])
         return arr
     
     def __read_delay(self, rules):
         dt = rules["Duration"]+rules["Deviation"]*(1-2*random.random())
-        return [[lambda: self.__delay(dt), "Delay", dt]]
+        return [[self.__delay, "Delay", [0,dt]]]
     
     def __read_dropout_sequence(self, rules):
         if rules["Number_drop"] > rules["Repeat"]:
@@ -131,6 +142,7 @@ class Experiment:
         self.arduino.send_signal(signal)
     
     def __delay(self, value):
+        value = value[1]
         self.log_cb("delay: " + str(value))
         #wait for the delay while checking if the experiment is still running
         t0 = time.time()

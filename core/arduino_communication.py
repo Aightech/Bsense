@@ -10,7 +10,7 @@ class ArduinoCom:
         # Connect to Arduino
         self.path = path
         try:
-            self.arduino = serial.Serial(path, 9600, timeout=1)
+            self.arduino = serial.Serial(path, 115200, timeout=1)
             time.sleep(2)
         except:
             raise Exception("Arduino not found at " + path)
@@ -18,21 +18,19 @@ class ArduinoCom:
     def send_signal(self, signal):
         """Send a signal to the Arduino
         signal is a tuple:
-        - vibration intensity [0,1]
-        - a tone intensity [0,1]
-        - a duration in centiseconds [0, 255]
+        - signal[0] is the source ['v', 'w', 'b']
+        - signal[1] is the value (0-1)
+        - signal[2] is the second value (0-1)
+        - signal[3] is the duration in 100us (0-65535)
         """
-        # vib = int(signal[0]*255).to_bytes(1, byteorder='big', signed=False)
-        # vib2 = int(0).to_bytes(1, byteorder='big', signed=False)
-        # tone = int(signal[1]*255).to_bytes(1, byteorder='big', signed=False)
-        # duration = max(0, min(255, int(signal[2]))).to_bytes(1, byteorder='big', signed=False)
-        # cmd = vib+ vib2 + tone + duration
-        # self.arduino.write(cmd)
-        # time.sleep(signal[2]/100)
-        # ans = self.arduino.read(1)
-        # #check if the ans is equal to the sum of the bytes sent
-        # if ans != (sum(cmd)%256).to_bytes(1, byteorder='big', signed=False):
-        #     print("error in the communication")
-        #     print("cmd sent: ", cmd)
-        #     print("ans: ", ans)
+        #the cmd must start with 0xaa
+        start = int(0xaa).to_bytes(1, byteorder='big', signed=False)
+        #transform the char into bytes
+        source = ord(signal[0]).to_bytes(1, byteorder='big', signed=False)
+        val = int(signal[1]*255).to_bytes(1, byteorder='big', signed=False)
+        val2 = int(signal[2]*255).to_bytes(1, byteorder='big', signed=False)
+        dt = signal[3].to_bytes(2, byteorder='little', signed=False)
+        cmd = start + source + val + val2 + dt
+        self.arduino.write(cmd)
+        ans = self.arduino.read(6)
             
