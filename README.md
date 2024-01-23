@@ -1,5 +1,5 @@
 # Bsens
-Simple device to trigger audio and haptic feedback for prenatanal studies
+Simple device to trigger audio and haptic stimulus for prenatanal studies
 
 ## Hardware
 
@@ -38,21 +38,21 @@ Simple device to trigger audio and haptic feedback for prenatanal studies
 
 The GUI is written in Python and let you select 4 different existing experiments or open a custom one. 
 You can then RUN, STOP and PAUSE the experiment. Each time a experiment is run, a new log file is created. 
-The Log file contains the subject ID, the experiment name, the date and time of the experiment and the feedbacks given to the subject with a timestamp.
+The Log file contains the subject ID, the experiment name, the date and time of the experiment and the stimulus given to the subject with a timestamp.
 
 ### Experiment rule file
 
-The experiment rule file is a JSON file that contains the sequence of feedbacks or delays to be given to the subject.
+The experiment rule file is a JSON file that contains the sequence of stimulus or delays to be given to the subject.
 
 | Type | Description | Attributes |
 | ---- | ----------- | ---------- |
-| Sequence | A sequence of feedbacks or delays | <b>Repeat</b>: number of time the sequence is repeated <br> <b>Content</b>: list of feedbacks or delays |
-| Feedback | A feedback to be given to the subject | <b>Content</b>: list of feedbacks (see below) |
-| Vib1 | A vibration feedback | <b>Duration</b>: duration of the vibration (s) <br> <b>Deviation</b>: Random uniform deviation of the duration (s) |
-| Vib2 | A vibration feedback | <b>Duration</b>: duration of the vibration (s) <br> <b>Deviation</b>: Random uniform deviation of the duration (s) |
-| Buzzer | A buzzer feedback | <b>Duration</b>: duration of the buzzer (s) <br> <b>Deviation</b>: Random uniform deviation of the duration (s) |
-| Delay | A delay between two feedbacks | <b>Duration</b>: duration of the delay (s) <br> <b>Deviation</b>: Random uniform deviation of the duration (s) |
-| Dropout_sequence | A sequence of feedbacks or delays with dropout | <b>Repeat</b>: number of time the sequence is repeated <br> <b>Number_drop</b>: number of dropout in the sequence <br> <b>Content</b>: list of feedbacks or delays <br> <b>Dropout_content</b>: list of feedbacks or delays to be given during the dropout |
+| Sequence | A sequence of stimulus or delays | <b>Repeat</b>: number of time the sequence is repeated <br> <b>Content</b>: list of stimulus or delays |
+| stimulus | A stimulus to be given to the subject | <b>Content</b>: list of stimulus (see below) |
+| Vib1 | A vibration stimulus | <b>Duration</b>: duration of the vibration (s) <br> <b>Deviation</b>: Random uniform deviation of the duration (s) |
+| Vib2 | A vibration stimulus | <b>Duration</b>: duration of the vibration (s) <br> <b>Deviation</b>: Random uniform deviation of the duration (s) |
+| Buzzer | A buzzer stimulus | <b>Duration</b>: duration of the buzzer (s) <br> <b>Deviation</b>: Random uniform deviation of the duration (s) |
+| Delay | A delay between two stimulus | <b>Duration</b>: duration of the delay (s) <br> <b>Deviation</b>: Random uniform deviation of the duration (s) |
+| Dropout_sequence | A sequence of stimulus or delays with dropout | <b>Repeat</b>: number of time the sequence is repeated <br> <b>Number_drop</b>: number of dropout in the sequence <br> <b>Content</b>: list of stimulus or delays <br> <b>Dropout_content</b>: list of stimulus or delays to be given during the dropout |
 
 
 **Example**
@@ -66,7 +66,7 @@ The experiment rule file is a JSON file that contains the sequence of feedbacks 
             "Repeat": 2,
             "Content": [
                 {
-                    "Type": "Feedback",
+                    "Type": "stimulus",
                     "Content": [
                         {
                             "Type": "Vib2",
@@ -91,7 +91,7 @@ The experiment rule file is a JSON file that contains the sequence of feedbacks 
                     "Repeat": 5,
                     "Content": [
                         {
-                            "Type": "Feedback",
+                            "Type": "stimulus",
                             "Content": [
                                 {
                                     "Type": "Vib2",
@@ -113,7 +113,7 @@ The experiment rule file is a JSON file that contains the sequence of feedbacks 
                     "Number_drop": 2,
                     "Content": [
                         {
-                            "Type": "Feedback",
+                            "Type": "stimulus",
                             "Content": [
                                 {
                                     "Type": "Vib2",
