@@ -113,6 +113,7 @@ class Experiment:
                         val2 = fb["Tone"]+fb["Deviation"]*(1-2*random.random())
                     if "Duration" in fb:
                         dt = fb["Duration"]+fb["Deviation"]*(1-2*random.random())
+
                 signal = (source, val, val2, dt)
                 arr.append([self.__stimulus, fb["Type"], signal])
         return arr
@@ -146,7 +147,7 @@ class Experiment:
         self.log_cb("delay: " + str(value))
         #wait for the delay while checking if the experiment is still running
         t0 = time.time()
-        while time.time() - t0 < value/4 and self.running:
+        while time.time() - t0 < value and self.running:
             time.sleep(0.001)
     
     def from_json(self, path):

@@ -28,9 +28,9 @@ class BsenseGUI(ctk.CTk):
         self.exp_rules = []
         
         self.exp_rules.append({"Type": "Sequence", "Repeat": 10, "Content": [{"Type": "stimulus", "Content": [{"Type": "Vib2", "Amplitude": 1, "Deviation": 0}]}, {"Type": "Delay", "Duration": 10, "Deviation": 2}]})
-        self.exp_rules.append({"Type": "Sequence", "Repeat": 10, "Content": [{"Type": "stimulus", "Content": [{"Type": "Vib2", "Amplitude": 1, "Deviation": 0}]}, {"Type": "Delay", "Duration": 10, "Deviation": 0}, {"Type": "stimulus", "Content": [{"Type": "Vib2", "Amplitude": 1, "Deviation": 0}]}, {"Type": "Delay", "Duration": 10, "Deviation": 2}]})
+        self.exp_rules.append({"Type": "Sequence", "Repeat": 10, "Content": [{"Type": "stimulus", "Content": [{"Type": "Vib2", "Amplitude": 1, "Deviation": 0}]}, {"Type": "Delay", "Duration": 1, "Deviation": 0}, {"Type": "stimulus", "Content": [{"Type": "Vib2", "Amplitude": 1, "Deviation": 0}]}, {"Type": "Delay", "Duration": 10, "Deviation": 2}]})
         self.exp_rules.append({"Type": "Sequence", "Repeat": 10, "Content": [{"Type": "stimulus", "Content": [{"Type": "Buzzer", "Amplitude": 1, "Deviation": 0}]}, {"Type": "Delay", "Duration": 10, "Deviation": 2}]})
-        self.exp_rules.append({"Type": "Sequence", "Repeat": 10, "Content": [{"Type": "stimulus", "Content": [{"Type": "Buzzer", "Amplitude": 1, "Deviation": 0}]}, {"Type": "Delay", "Duration": 10, "Deviation": 2}]})
+        self.exp_rules.append({"Type": "Sequence", "Repeat": 10, "Content": [{"Type": "stimulus", "Content": [{"Type": "Buzzer", "Amplitude": 1, "Deviation": 0},{"Type": "Vib2", "Amplitude": 1, "Deviation": 0}]}, {"Type": "Delay", "Duration": 10, "Deviation": 2}]})
         self.current_exp_index = 0
         
         self.title(self.name + " " + self.version)
@@ -142,7 +142,7 @@ class BsenseGUI(ctk.CTk):
         self.connection_label = ctk.CTkLabel(self.device_frame, text="Device: ")
         self.connection_label.pack(side=tk.LEFT, padx=5, pady=0)
         self.connection_entry = ctk.CTkEntry(self.device_frame)
-        self.connection_entry.insert(0, "/dev/ttyACM0")
+        self.connection_entry.insert(0, "COM3")
         self.connection_entry.pack(side=tk.LEFT, padx=10, pady=10, expand=True, fill=tk.X)
         self.connection_button = ctk.CTkButton(self.device_frame, text="Connect", command=self.on_button_connect_click, width=10)
         self.connection_button.pack(side=tk.LEFT, padx=10, pady=10)
@@ -192,7 +192,7 @@ class BsenseGUI(ctk.CTk):
         self.path_label.pack(side=tk.LEFT, padx=5, pady=0)
         self.path_entry = ctk.CTkEntry(self.path_frame)
         self.path_entry.pack(side=tk.LEFT, padx=5, pady=0, expand=True, fill=tk.X)
-        self.path_entry.insert(0, "./code/expCustom_rule.json")
+        self.path_entry.insert(0, "../code/expCustom_rule.json")
         self.path_browser_button = ctk.CTkButton(self.path_frame, text="Browse", command=self.on_path_browser_click)
         self.path_browser_button.pack(side=tk.LEFT, padx=5, pady=5)
         

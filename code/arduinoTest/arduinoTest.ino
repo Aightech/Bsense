@@ -66,6 +66,7 @@ void TimerHandler()
   {
     vib1(false);
     vib1_state = false;
+    digitalWrite(LED_BUILTIN, LOW);
   }
 
   if(micros()<delay_ms_vib2)
@@ -76,6 +77,7 @@ void TimerHandler()
   {
     vib2(false,false);
     vib2_state = false;
+    digitalWrite(LED_BUILTIN, LOW);
   }
 
   if(micros()<delay_ms_buzz)
@@ -85,6 +87,7 @@ void TimerHandler()
   {
     buzzer(0,0);
     buzz_state = false;
+    digitalWrite(LED_BUILTIN, LOW);
   }
 }
 
@@ -154,19 +157,19 @@ void loop()
         v1 = buff[i+2];
         v2 = buff[i+3];
         dt = buff[i+4] + buff[i+5]*256;
+        digitalWrite(LED_BUILTIN, HIGH);
         switch (source)
         {
           case 'v':
             vib1(v1);
-            delay_ms_vib1 = micros() + 100*dt;
+            delay_ms_vib1 = micros() + 100;//*dt;
             break;
           case 'w':
             vib2(v1,v2);
-            delay_ms_vib2 = micros() + 100*dt;
+            delay_ms_vib2 = micros() + 100;//*dt;
             break;
           case 'b':
             buzzer(v1,v2);
-            digitalWrite(LED_BUILTIN, HIGH);
             delay_ms_buzz = micros() + 100*dt;
             break;
           default:  

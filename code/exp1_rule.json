@@ -7,8 +7,8 @@
             "Content": [
                 {
                     "Type": "Vib2",
-                    "Amplitude": 0.9,
-                    "Deviation": 0.1
+                    "Amplitude": 1,
+                    "Deviation": 0
                 }               
             ]
         },

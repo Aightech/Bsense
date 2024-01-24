@@ -1,13 +1,18 @@
 {
     "Type": "Sequence",
-    "Repeat": 1,
-    "Content": [ 
+    "Repeat": 10,
+    "Content": [
         {
             "Type": "stimulus",
             "Content": [
                 {
+                    "Type": "Vib2",
+                    "Amplitude": 1,
+                    "Deviation": 0
+                },
+                {
                     "Type": "Buzzer",
-                    "Duration": 1,
+                    "Amplitude": 1,
                     "Deviation": 0
                 }
             ]

@@ -1,6 +1,6 @@
 {
     "Type": "Sequence",
-    "Repeat": 1,
+    "Repeat": 10,
     "Content": [
         {
             "Type": "stimulus",
@@ -14,7 +14,7 @@
         },
         {
             "Type": "Delay",
-            "Duration": 0.5,
+            "Duration": 1,
             "Deviation": 0
         },
         {
