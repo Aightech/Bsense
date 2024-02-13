@@ -11,6 +11,7 @@ Simple device to trigger audio and haptic stimulus for prenatanal studies
 | Arduino Mega 2560 | 1 | £30 | [Link](https://store.arduino.cc/arduino-mega-2560-rev3) |
 | H-brige -  L298N | 1 | £2 | [Link](https://www.amazon.co.uk/Driver-H-Bridge-Stepper-Controller-Arduino/dp/B07YC1GFM3/ref=sr_1_6?crid=TGY74KFTE5R9&keywords=h+bridge&qid=1702907659&sprefix=h+br%2Caps%2C50&sr=8-6) |
 | LRA - VG0640001D | 1 | £2 | [Link](https://www.digikey.co.uk/en/products/detail/vybronics-inc/VG0640001D/15220805) |
+| LRA - VLV101040A | 1 | £5 | [Link](https://www.digikey.co.uk/en/products/detail/vybronics-inc/VLV101040A/12323590) |
 | STspin250 dev board | 1 | £15 | [Link](https://www.mikroe.com/stspin250-click) |
 | Buzzer | 1 | £5 | [Link](https://www.amazon.co.uk/dp/B096ZWCG7F?psc=1&ref=ppx_yo2ov_dt_b_product_details) |
 | Pressure sensor - ? | 1 | £5 | [Link](https://?) |
@@ -142,3 +143,15 @@ The experiment rule file is a JSON file that contains the sequence of stimulus o
     ]
 }
 ```
+
+## Requirements
+
+- Python 3.x
+- Tkinter library
+- CustomTkinter library
+- Threading module
+
+## Setup
+
+Ensure Python 3.x is installed on your system along with the required libraries. The GUI utilizes `tkinter` and `customtkinter` for the interface, `threading` for managing concurrent tasks, and a custom `Experiment` class from the `core.experiment` module for experiment logic.
+
