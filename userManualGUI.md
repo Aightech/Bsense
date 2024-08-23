@@ -13,7 +13,7 @@ Bsense GUI, is a Python-based graphical user interface for conducting experiment
 
 ### Experiment Configuration
 - Predefined experiments: Includes a set of predefined experiments which can be selected via a dropdown menu.
-- Custom experiments: Users can load custom experiments by selecting a JSON file that defines the experiment parameters. You have to select the file using the "Browse" button. (see [Writing Your Own Experiment Configuration File](#writing-your-own-experiment-configuration-file) for more details on the JSON file format)
+- Custom experiments: Users can load custom experiments by selecting a JSON file that defines the experiment parameters. You have to select "Experiment Custom" in the type of experiement and then select the file using the "Browse" button. (see [Writing Your Own Experiment Configuration File](#writing-your-own-experiment-configuration-file) for more details on the JSON file format)
 
 ### Experiment Controls
 
