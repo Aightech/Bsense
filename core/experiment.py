@@ -70,7 +70,9 @@ class Experiment:
                 self.log_cb("End of experiment")
             if self.running:
                 self.event_cb(self.current_idx)
+                # print("kernel time: "+str(time.time()), self.sequence[self.current_idx][1])
                 self.sequence[self.current_idx][0](self.sequence[self.current_idx][2])
+                #print kernel time
                 if self.running:#check if the experiment is still running and was not stopped during the execution of the event
                     self.current_idx += 1
             else:

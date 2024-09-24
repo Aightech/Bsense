@@ -18,10 +18,10 @@ class ArduinoCom:
     def send_signal(self, signal):
         """Send a signal to the Arduino
         signal is a tuple:
-        - signal[0] is the source ['v', 'w', 'b']
-        - signal[1] is the value (0-1)
-        - signal[2] is the second value (0-1)
-        - signal[3] is the duration in 100us (0-65535)
+        - signal[0] is the source ['v', 'w', 'b'] vib1, vib2, buzzer
+        - signal[1] is the value (0-255)
+        - signal[2] is the second value (0-255)
+        - signal[3-4] is the duration in 100us (0-65535)
         """
         #the cmd must start with 0xaa
         start = int(0xaa).to_bytes(1, byteorder='big', signed=False)
@@ -31,6 +31,8 @@ class ArduinoCom:
         val2 = int(signal[2]*255).to_bytes(1, byteorder='big', signed=False)
         dt = signal[3].to_bytes(2, byteorder='little', signed=False)
         cmd = start + source + val + val2 + dt
+        # print("before send"+str(time.time()))
         self.arduino.write(cmd)
-        ans = self.arduino.read(6)
+        # ans = self.arduino.read(6)
+        # print("after send"+str(time.time()))
             
