@@ -20,6 +20,8 @@ class BsenseGUI(ctk.CTk):
         self.name = "Bsense"
         self.version = "1.0"
         self.author = "Alexis Devillard"
+
+        self.in_debug_mode = False
         
         self.w_width = 1200
         self.w_height = 410
@@ -44,6 +46,26 @@ class BsenseGUI(ctk.CTk):
 
         self.setup_ui()
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
+    
+    def debug_mode(self):
+        # Debug mode
+        self.in_debug_mode = True
+        #fill subject name
+        self.subject_entry.insert(0, "test")
+        #click ok
+        self.on_button_validate_user_click()
+    
+    def set_port(self, port):
+        self.connection_entry.delete(0, tk.END)
+        self.connection_entry.insert(0, port)
+
+    def set_file(self, file):
+        self.path_entry.delete(0, tk.END)
+        self.path_entry.insert(0, file)
+        self.exp.from_json(file)
+        self.update_treeview(self.exp.sequence)
+        self.add_log("Custom experiment: " + file)
+
         
 
     def setup_ui(self):

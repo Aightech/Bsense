@@ -102,22 +102,49 @@ class Experiment:
         signal = 0
         arr = []
         for fb in rules["Content"]:
-            if fb["Type"] == "Vib1" or fb["Type"] == "Vib2" or fb["Type"] == "Buzzer":
-                source = "v" if fb["Type"] == "Vib1" else "w" if fb["Type"] == "Vib2" else "b"
-                val = fb["Amplitude"]+fb["Deviation"]*(1-2*random.random())
-                val2 = 0
-                dt = 0
-                #check if "tone" is in the keys of the dict
-                if fb["Type"] == "Buzzer":
-                    val2 = 0.5
-                    dt = 500
-                    if "Tone" in fb:
-                        val2 = fb["Tone"]+fb["Deviation"]*(1-2*random.random())
-                    if "Duration" in fb:
-                        dt = fb["Duration"]+fb["Deviation"]*(1-2*random.random())
+            if fb["Type"] == "Buzzer":##Buzzer
+                val = fb["Amplitude"]
+                if "Deviation" in fb:
+                    val += fb["Deviation"]*(1-2*random.random())
+                val2 = 0.5
+                dt = 500
+                if "Tone" in fb:
+                    val2 = fb["Tone"]
+                    if "Deviation_tone" in fb:
+                        val2 += fb["Deviation_tone"]*(1-2*random.random())
+                if "Duration" in fb:
+                    dt = fb["Duration"]
+                    if "Deviation_duration" in fb:
+                        dt += fb["Deviation_duration"]*(1-2*random.random())
+                signal = ("b", val, val2, dt)
 
-                signal = (source, val, val2, dt)
-                arr.append([self.__stimulus, fb["Type"], signal])
+            elif fb["Type"] == "Vib1" or fb["Type"] == "Vib2":##Vib1 or Vib2
+                val = fb["Amplitude"]
+                if "Deviation" in fb:
+                    val += fb["Deviation"]*(1-2*random.random())
+                source = "v" if fb["Type"] == "Vib1" else "w"
+                signal = (source, val)
+
+            elif fb["Type"] == "BuzzVib2": ##BuzzVib2
+                ampBuzz = fb["Amplitude_buzz"]
+                if "Deviation_amplitude_buzz" in fb:
+                    ampBuzz += fb["Deviation_amplitude_buzz"]*(1-2*random.random())
+                ampVib2 = fb["Amplitude_vib2"]
+                if "Deviation_amplitude_vib2" in fb:
+                    ampVib2 += fb["Deviation_amplitude_vib2"]*(1-2*random.random())
+                tone = 0.5
+                dt = 500
+                if "Tone_buzz" in fb:
+                    tone = fb["Tone_buzz"]
+                    if "Deviation_tone_buzz" in fb:
+                        tone += fb["Deviation_tone_buzz"]*(1-2*random.random())
+                if "Duration_buzz" in fb:
+                    dt = fb["Duration_buzz"]
+                    if "Deviation_duration_buzz" in fb:
+                        dt += fb["Deviation_duration_buzz"]*(1-2*random.random())
+                signal = ("c", ampBuzz, tone, dt, ampVib2)
+                
+            arr.append([self.__stimulus, fb["Type"], signal])
         return arr
     
     def __read_delay(self, rules):
@@ -143,6 +170,7 @@ class Experiment:
     def __stimulus(self, signal):
         # Stimulus logic
         self.arduino.send_signal(signal)
+        self.log_cb("stimulus: " + str(signal))
     
     def __delay(self, value):
         value = value[1]

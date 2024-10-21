@@ -10,14 +10,13 @@
                     "Type": "stimulus",
                     "Content": [
                         {
-                            "Type": "Vib2",
-                            "Amplitude": 1,
-                            "Deviation": 0
-                        },
-                        {
-                            "Type": "Buzzer",
-                            "Amplitude": 1,
-                            "Deviation": 0
+                            "Type": "BuzzVib2",
+                            "Amplitude_buzz": 0.7,
+                            "Deviation_amplitude_buzz": 0.3,
+                            "Duration_buzz": 500,
+                            "Tone_buzz": 0.5,
+                            "Amplitude_vib2": 0.8,
+                            "Deviation_amplitude_vib2": 0.2
                         }
                     ]
                 },

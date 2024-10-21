@@ -42,22 +42,26 @@ You can then RUN, STOP and PAUSE the experiment. Each time a experiment is run, 
 The Log file contains the subject ID, the experiment name, the date and time of the experiment and the stimulus given to the subject with a timestamp.
 
 ### Experiment rule file
+## Experiment Rule File
 
-The experiment rule file is a JSON file that contains the sequence of stimulus or delays to be given to the subject.
+The experiment rule file is a JSON file that contains the sequence of stimuli or delays to be applied to the subject.
+
+### Components
 
 | Type | Description | Attributes |
 | ---- | ----------- | ---------- |
-| Sequence | A sequence of stimulus or delays | <b>Repeat</b>: number of time the sequence is repeated <br> <b>Content</b>: list of stimulus or delays |
-| stimulus | A stimulus to be given to the subject | <b>Content</b>: list of stimulus (see below) |
-| Vib1 | A vibration stimulus | <b>Duration</b>: duration of the vibration (s) <br> <b>Deviation</b>: Random uniform deviation of the duration (s) |
-| Vib2 | A vibration stimulus | <b>Duration</b>: duration of the vibration (s) <br> <b>Deviation</b>: Random uniform deviation of the duration (s) |
-| Buzzer | A buzzer stimulus | <b>Duration</b>: duration of the buzzer (s) <br> <b>Deviation</b>: Random uniform deviation of the duration (s) |
-| Delay | A delay between two stimulus | <b>Duration</b>: duration of the delay (s) <br> <b>Deviation</b>: Random uniform deviation of the duration (s) |
-| Dropout_sequence | A sequence of stimulus or delays with dropout | <b>Repeat</b>: number of time the sequence is repeated <br> <b>Number_drop</b>: number of dropout in the sequence <br> <b>Content</b>: list of stimulus or delays <br> <b>Dropout_content</b>: list of stimulus or delays to be given during the dropout |
+| **Sequence** | A sequence of stimuli or delays | **Repeat**: number of times the sequence is repeated <br> **Content**: list of stimuli or delays |
+| **stimulus** | A stimulus to be given to the subject | **Content**: list of stimuli (see below) |
+| **Vib1** | A vibration stimulus | **Amplitude**: Amplitude of the vibration (0-1) <br> **Deviation**: Random uniform deviation of the amplitude |
+| **Vib2** | A vibration stimulus | **Amplitude**: Amplitude of the vibration (0-1) <br> **Deviation**: Random uniform deviation of the amplitude |
+| **Buzzer** | A buzzer stimulus | **Amplitude**: Amplitude of the buzzer (0-1) <br> **Tone**: Tone of the buzzer (0-1) <br> **Duration**: Duration of the buzzer (ms) <br> **Deviation**: Random uniform deviation of the duration (ms) |
+| **BuzzVib2** | A combined buzzer and vibration stimulus | **Amplitude_buzz**: Amplitude of the buzz (0-1) <br> **Deviation_amplitude_buzz**: Random uniform deviation of the buzz amplitude <br> **Duration_buzz**: Duration of the buzz (ms) <br> **Tone_buzz**: Tone of the buzzer (0-1) <br> **Amplitude_vib2**: Amplitude of the vibration (0-1) <br> **Deviation_amplitude_vib2**: Random uniform deviation of the vibration amplitude |
+| **Delay** | A delay between two stimuli | **Duration**: Duration of the delay (s) <br> **Deviation**: Random uniform deviation of the duration (s) |
+| **Dropout_sequence** | A sequence of stimuli or delays with dropout | **Repeat**: Number of times the sequence is repeated <br> **Number_drop**: Number of dropouts in the sequence <br> **Content**: List of stimuli or delays <br> **Dropout_content**: List of stimuli or delays to be applied during the dropout |
 
+### Example
 
-**Example**
-```JSOM
+```json
 {
     "Type": "Sequence",
     "Repeat": 2,
@@ -139,7 +143,6 @@ The experiment rule file is a JSON file that contains the sequence of stimulus o
                 }
             ]
         }
-
     ]
 }
 ```
