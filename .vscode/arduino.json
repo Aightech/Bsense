@@ -1,5 +1,6 @@
 {
-    "board": "arduino:avr:mega",
+    "board": "teensy:avr:teensy40",
     "port": "/dev/ttyACM0",
-    "sketch": "code/arduino/arduino.ino"
+    "sketch": "code/teensy/teensy.ino",
+    "configuration": "usb=serial,speed=600,opt=o2std,keys=en-us"
 }
