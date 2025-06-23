@@ -1,0 +1,6 @@
+00:20:15[1750720815.859276] - Experiment selected: Experiment 1
+00:20:16[1750720816.207321] - User: test
+
+00:20:16[1750720816.2165945] - Jump to event: 0
+00:20:23[1750720823.7219386] - Error: Arduino not found at /dev/ttyACM0
+00:20:29[1750720829.1544259] - Error: Arduino not found at /dev/ttyACM0
