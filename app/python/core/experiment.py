@@ -106,7 +106,7 @@ class Experiment:
                 val = fb["Amplitude"]
                 if "Deviation" in fb:
                     val += fb["Deviation"]*(1-2*random.random())
-                val2 = 0.5
+                val2 = 200
                 dt = 500
                 if "Tone" in fb:
                     val2 = fb["Tone"]
@@ -127,14 +127,19 @@ class Experiment:
                 source = "v" if fb["Type"] == "Vib1" else "w"
                 signal = (source, val, freq, dt)
 
-            elif fb["Type"] == "BuzzVib2": ##BuzzVib2
+            elif fb["Type"] == "BuzzVib1": ##BuzzVib1
+                ampVib1 = fb["Amplitude_vib1"]
+                if "Deviation_amplitude_vib1" in fb:
+                    ampVib1 += fb["Deviation_amplitude_vib1"]*(1-2*random.random())
+                freqVib1 = fb["Frequency_vib1"]
+                dtVib1 = fb["Duration_vib1"]
+                if "Deviation_duration_vib1" in fb:
+                    dtVib1 += fb["Deviation_duration_vib1"]*(1-2*random.random())
+                
                 ampBuzz = fb["Amplitude_buzz"]
                 if "Deviation_amplitude_buzz" in fb:
                     ampBuzz += fb["Deviation_amplitude_buzz"]*(1-2*random.random())
-                ampVib2 = fb["Amplitude_vib2"]
-                if "Deviation_amplitude_vib2" in fb:
-                    ampVib2 += fb["Deviation_amplitude_vib2"]*(1-2*random.random())
-                tone = 0.5
+                tone = 200
                 dt = 500
                 if "Tone_buzz" in fb:
                     tone = fb["Tone_buzz"]
@@ -144,7 +149,8 @@ class Experiment:
                     dt = fb["Duration_buzz"]
                     if "Deviation_duration_buzz" in fb:
                         dt += fb["Deviation_duration_buzz"]*(1-2*random.random())
-                signal = ("c", ampBuzz, tone, dt, ampVib2)
+                
+                signal = ("c", ampVib1, freqVib1, dtVib1, ampBuzz, tone, dt)
                 
             arr.append([self.__stimulus, fb["Type"], signal])
         return arr

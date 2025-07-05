@@ -1,160 +1,163 @@
-# Bsens
-Simple device to trigger audio and haptic stimulus for prenatanal studies
+# Bsense
+
+Simple device to trigger audio and haptic stimuli for prenatal studies.
 
 ## Hardware
 
-### Parts
+### Components
 
+| Part                  | Qty | Price | Link |
+|-----------------------|-----|-------|------|
+| Arduino Mega 2560     | 1   | £30   | [Arduino Mega 2560 Rev3](https://store.arduino.cc/arduino-mega-2560-rev3) |
+| H-bridge (L298N)      | 1   | £2    | [Amazon UK](https://www.amazon.co.uk/Driver-H-Bridge-Stepper-Controller-Arduino/dp/B07YC1GFM3) |
+| LRA (VG0640001D)      | 1   | £2    | [Digi-Key](https://www.digikey.co.uk/en/products/detail/vybronics-inc/VG0640001D/15220805) |
+| LRA (VLV101040A)      | 1   | £5    | [Digi-Key](https://www.digikey.co.uk/en/products/detail/vybronics-inc/VLV101040A/12323590) |
+| STSPIN250 dev board   | 1   | £15   | [MikroElektronika](https://www.mikroe.com/stspin250-click) |
+| Buzzer                | 1   | £5    | [Amazon UK](https://www.amazon.co.uk/dp/B096ZWCG7F) |
+| Pressure sensor       | 1   | £5    | *To be specified* |
+| GX16-5 connector      | 5   | £1.50 | [Amazon UK](https://www.amazon.co.uk/gp/product/B07WPBXX57) |
+| USB-B connector       | 1   | £6.50 | [Amazon UK](https://www.amazon.co.uk/gp/product/B075FVGH8H/) |
 
-| Part | Quantity | Price | Link |
-| ---- | -------- | ----- | ---- |
-| Arduino Mega 2560 | 1 | £30 | [Link](https://store.arduino.cc/arduino-mega-2560-rev3) |
-| H-brige -  L298N | 1 | £2 | [Link](https://www.amazon.co.uk/Driver-H-Bridge-Stepper-Controller-Arduino/dp/B07YC1GFM3/ref=sr_1_6?crid=TGY74KFTE5R9&keywords=h+bridge&qid=1702907659&sprefix=h+br%2Caps%2C50&sr=8-6) |
-| LRA - VG0640001D | 1 | £2 | [Link](https://www.digikey.co.uk/en/products/detail/vybronics-inc/VG0640001D/15220805) |
-| LRA - VLV101040A | 1 | £5 | [Link](https://www.digikey.co.uk/en/products/detail/vybronics-inc/VLV101040A/12323590) |
-| STspin250 dev board | 1 | £15 | [Link](https://www.mikroe.com/stspin250-click) |
-| Buzzer | 1 | £5 | [Link](https://www.amazon.co.uk/dp/B096ZWCG7F?psc=1&ref=ppx_yo2ov_dt_b_product_details) |
-| Pressure sensor - ? | 1 | £5 | [Link](https://?) |
-| GX16-5 Connector | 5 | £1.5 | [Link](https://www.amazon.co.uk/gp/product/B07WPBXX57/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1) |
-| USB-B Connector | 1 | £6.5 | [Link](https://www.amazon.co.uk/gp/product/B075FVGH8H/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1) |
+**Total cost:** ~£70
 
-| Total | ~ £70 |
-| ----- | ---- |
+### Schematic
 
+![System schematic](docs/schematics.drawio.svg)
 
-### Diagram
+### Enclosure
 
-![Diagram](docs/schematics.drawio.svg)
+| Model  | File                  |
+|--------|-----------------------|
+| Box    | [docs/box.stl](docs/box.stl) |
+| Lid    | [docs/lid.stl](docs/lid.stl) |
 
-### 3D Model
-
-| Name | File |
-| ---- | ---- |
-| Box | [Link](docs/box.stl) |
-| Lid | [Link](docs/lid.stl) |
-
-![Box](docs/render.png)
+![Rendered enclosure](docs/render.png)
 
 ## Software
 
-The GUI is written in Python and let you select 4 different existing experiments or open a custom one. 
-You can then RUN, STOP and PAUSE the experiment. Each time a experiment is run, a new log file is created. 
-The Log file contains the subject ID, the experiment name, the date and time of the experiment and the stimulus given to the subject with a timestamp.
+The GUI is written in Python 3 and CustomTkinter. It enables selection of four predefined experiments or a custom protocol, then controls Run, Pause and Stop operations. Each session generates a timestamped log file recording subject ID, protocol name, stimulus parameters and timestamps.
 
-### Experiment rule file
-## Experiment Rule File
+### Usage
 
-The experiment rule file is a JSON file that contains the sequence of stimuli or delays to be applied to the subject.
+1. **Connect**: enter serial port (e.g. `COM3` or `/dev/ttyUSB0`), click **Connect**.
+2. **Validate subject**: input non-empty ID, click ✔.
+3. **Select protocol**: choose from drop-down or browse JSON.
+4. **Run**: click ▶ to start; use || to pause; ■ to stop.
+5. **Log**: view live log; add manual annotations via bottom-left field.
 
-### Components
 
-| Type | Description | Attributes |
-| ---- | ----------- | ---------- |
-| **Sequence** | A sequence of stimuli or delays | **Repeat**: number of times the sequence is repeated <br> **Content**: list of stimuli or delays |
-| **stimulus** | A stimulus to be given to the subject | **Content**: list of stimuli (see below) |
-| **Vib1** | A vibration stimulus | **Amplitude**: Amplitude of the vibration (0-1) <br> **Deviation**: Random uniform deviation of the amplitude |
-| **Vib2** | A vibration stimulus | **Amplitude**: Amplitude of the vibration (0-1) <br> **Deviation**: Random uniform deviation of the amplitude |
-| **Buzzer** | A buzzer stimulus | **Amplitude**: Amplitude of the buzzer (0-1) <br> **Tone**: Tone of the buzzer (0-1) <br> **Duration**: Duration of the buzzer (ms) <br> **Deviation**: Random uniform deviation of the duration (ms) |
-| **BuzzVib2** | A combined buzzer and vibration stimulus | **Amplitude_buzz**: Amplitude of the buzz (0-1) <br> **Deviation_amplitude_buzz**: Random uniform deviation of the buzz amplitude <br> **Duration_buzz**: Duration of the buzz (ms) <br> **Tone_buzz**: Tone of the buzzer (0-1) <br> **Amplitude_vib2**: Amplitude of the vibration (0-1) <br> **Deviation_amplitude_vib2**: Random uniform deviation of the vibration amplitude |
-| **Delay** | A delay between two stimuli | **Duration**: Duration of the delay (s) <br> **Deviation**: Random uniform deviation of the duration (s) |
-| **Dropout_sequence** | A sequence of stimuli or delays with dropout | **Repeat**: Number of times the sequence is repeated <br> **Number_drop**: Number of dropouts in the sequence <br> **Content**: List of stimuli or delays <br> **Dropout_content**: List of stimuli or delays to be applied during the dropout |
 
-### Example
+### Experiment Protocol
+The experiment protocol is defined in JSON format, allowing for flexible configuration of stimuli and delays. The protocol consists of nested sequences, each containing various types of stimuli and delays.
 
-```json
+| Type                  | Description                        | Attributes                                                                                                                                      |
+| --------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Sequence**          | Repeatable block of stimuli/delays | `Repeat` (int), `Content` (list of stimuli/delays)                                                                                              |
+| **stimulus**          | Container for one or more stimuli  | `Content` (list of individual stimuli)                                                                                                          |
+| **Vib1**  | Single vibration                   | `Amplitude` (0–1), `Frequency` (Hz), `Duration` (ms), `Deviation` (± uniform)                                                                   |
+| **Buzzer**            | Audio tone                         | `Amplitude` (0–1), `Tone` (Hz), `Duration` (ms), `Deviation_tone`, `Deviation_duration`                                                         |
+| **BuzzVib1**          | Combined buzzer + vibration        | `Amplitude_buzz`, `Deviation_amplitude_buzz`, `Tone_buzz`, `Deviation_tone_buzz`, `Duration_buzz`, `Amplitude_vib2`, `Deviation_amplitude_vib2` |
+| **Delay**             | Pause                              | `Duration` (s), `Deviation` (± uniform)                                                                                                         |
+| **Dropout\_sequence** | Sequence with random dropouts      | `Repeat` (int), `Number_drop` (int), `Content`, `Dropout_content`                                                                               |
+
+
+
+## JSON protocol format
+
+Look exemple in `app/python/config/`
+
+
+### Installation - Python development
+
+1. Clone repository.  
+2. Create and activate virtual environment:
+```bash
+   python3 -m venv env
+   source env/bin/activate       # Linux/macOS
+   env\Scripts\activate          # Windows
+```
+
+3. Install dependencies:
+
+```bash
+pip install customtkinter
+```
+4. Ensure `core/experiment.py` and example JSON (`code/expCustom_rule.json`) are present.
+
+5. Run the GUI:
+```bash
+python main.py
+```
+
+
+### Communication Protocol
+
+```wavedrom
 {
-    "Type": "Sequence",
-    "Repeat": 2,
-    "Content": [
-        {
-            "Type": "Sequence",
-            "Repeat": 2,
-            "Content": [
-                {
-                    "Type": "stimulus",
-                    "Content": [
-                        {
-                            "Type": "Vib2",
-                            "Duration": 1,
-                            "Deviation": 0
-                        }
-                    ]
-                },
-                {
-                    "Type": "Delay",
-                    "Duration": 2,
-                    "Deviation": 0
-                }
-            ]
-        },
-        {
-            "Type": "Sequence",
-            "Repeat": 1,
-            "Content": [
-                {
-                    "Type": "Sequence",
-                    "Repeat": 5,
-                    "Content": [
-                        {
-                            "Type": "stimulus",
-                            "Content": [
-                                {
-                                    "Type": "Vib2",
-                                    "Duration": 1,
-                                    "Deviation": 0
-                                }
-                            ]
-                        },
-                        {
-                            "Type": "Delay",
-                            "Duration": 4,
-                            "Deviation": 0
-                        }
-                    ]
-                },
-                {
-                    "Type": "Dropout_sequence",
-                    "Repeat": 5,
-                    "Number_drop": 2,
-                    "Content": [
-                        {
-                            "Type": "stimulus",
-                            "Content": [
-                                {
-                                    "Type": "Vib2",
-                                    "Duration": 1,
-                                    "Deviation": 0
-                                }
-                            ]
-                        },
-                        {
-                            "Type": "Delay",
-                            "Duration": 1,
-                            "Deviation": 0
-                        }
-                    ],
-                    "Dropout_content": [
-                        {
-                            "Type": "Delay",
-                            "Duration": 3,
-                            "Deviation": 0
-                        }
-                    ]
-                }
-            ]
-        }
+    signal: [
+        { name: "Command header", wave: "x====...xxx", data: ["0xaa", "src", "len", "data [len bytes]"] },
+        { name: "Vibration 1", wave: "x======.xx", data: ["0xaa","'v'", "4","Amp", "Freq", "Durati. ms"] },
+        { name: "Buzzer", wave: "x======.xx", data: ["0xaa","'b'", "4","Amp", "Freq", "Durati. ms"] },
+        { name: "Buzz + Vibration 1", wave: "x======.===.xx", data: ["0xaa","'c'", "6","A_V", "F_V", "Dur_V.ms", "A_B", "F_B", "Dur_B.ms"] }, 
     ]
 }
 ```
 
-## Requirements
 
-- Python 3.x
-- Tkinter library
-- CustomTkinter library
-- Threading module
+### Example Matlab snippet
 
-## Setup
+```matlab
+% Initialise serial connection
+port = "COM3";            % adjust to your port
+baud = 115200;            % match Arduino Serial.begin()
+s = serialport(port, baud);
+flush(s);                 % clear buffer
 
-Ensure Python 3.x is installed on your system along with the required libraries. The GUI utilizes `tkinter` and `customtkinter` for the interface, `threading` for managing concurrent tasks, and a custom `Experiment` class from the `core.experiment` module for experiment logic.
+START_CHAR = uint8(255);
 
+% Send a vibration1 command
+% amp: 0–255, freq: Hz (uint8), duration: ms (uint16)
+function sendVib1(s, amp, freq, duration)
+    payload = [...
+        uint8(amp), ...
+        uint8(freq), ...
+        uint8(bitand(duration,255)), ...
+        uint8(bitshift(duration,-8)) ...
+    ];
+    header = [START_CHAR; uint8('v'); uint8(numel(payload))];
+    write(s, [header; payload], 'uint8');
+end
+
+% Send a buzzer command
+function sendBuzz(s, amp, freq, duration)
+    payload = [...
+        uint8(amp), ...
+        uint8(freq), ...
+        uint8(bitand(duration,255)), ...
+        uint8(bitshift(duration,-8)) ...
+    ];
+    header = [START_CHAR; uint8('b'); uint8(numel(payload))];
+    write(s, [header; payload], 'uint8');
+end
+
+% Send combination of vibration1 + buzzer
+function sendCombo(s, ampV, freqV, durV, ampB, freqB, durB)
+    payload = [...
+        uint8(ampV), ...
+        uint8(freqV), ...
+        uint8(bitand(durV,255)), ...
+        uint8(bitshift(durV,-8)), ...
+        uint8(ampB), ...
+        uint8(freqB), ...
+        uint8(bitand(durB,255)), ...
+        uint8(bitshift(durB,-8)) ...
+    ];
+    header = [START_CHAR; uint8('c'); uint8(numel(payload))];
+    write(s, [header; payload], 'uint8');
+end
+
+% Example usage:
+% sendVib1(s, 128, 50, 500);      % vibration1: 50 Hz, 500 ms, amplitude 128
+% sendBuzz(s, 200, 1000, 250);    % buzzer: 1 kHz, 250 ms, amplitude 200
+% sendCombo(s, 100, 80, 300, 150, 500, 400); % combo: vib1 80 Hz, 300 ms, amp 100 + buzzer 500 Hz, 400 ms, amp 150
+```

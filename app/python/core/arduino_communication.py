@@ -33,7 +33,7 @@ class ArduinoCom:
             #buzzer
             length = int(4).to_bytes(1, byteorder='big', signed=False)
             amp = int(signal[1]*255).to_bytes(1, byteorder='big', signed=False)
-            freq = int(signal[2]*255).to_bytes(1, byteorder='big', signed=False)
+            freq = int(signal[2]).to_bytes(1, byteorder='big', signed=False)
             dt = signal[3].to_bytes(2, byteorder='little', signed=False)
             buff = amp + freq + dt
         elif signal[0] == 'w' or signal[0] == 'v':
@@ -44,13 +44,15 @@ class ArduinoCom:
             dt = signal[3].to_bytes(2, byteorder='little', signed=False)
             buff = amp + freq + dt
         elif signal[0] == 'c':
-            #combined buzz and vib2
-            length = int(5).to_bytes(1, byteorder='big', signed=False)
-            amp = int(signal[1]*255).to_bytes(1, byteorder='big', signed=False)
-            freq = int(signal[2]*255).to_bytes(1, byteorder='big', signed=False)
-            dt = signal[3].to_bytes(2, byteorder='little', signed=False)
-            ampVib2 = int(signal[4]*255).to_bytes(1, byteorder='big', signed=False)
-            buff = amp + freq + dt + ampVib2
+            #combined buzz and vib1
+            length = int(8).to_bytes(1, byteorder='big', signed=False)
+            ampVib1 = int(signal[1]*255).to_bytes(1, byteorder='big', signed=False)
+            freqVib1 = int(signal[2]).to_bytes(1, byteorder='big', signed=False)
+            dtVib1 = signal[3].to_bytes(2, byteorder='little', signed=False)
+            ampBuzz = int(signal[4]*255).to_bytes(1, byteorder='big', signed=False)
+            freqBuzz = int(signal[5]).to_bytes(1, byteorder='big', signed=False)
+            dtBuzz = signal[6].to_bytes(2, byteorder='little', signed=False)
+            buff = ampVib1 + freqVib1 + dtVib1 + ampBuzz + freqBuzz + dtBuzz
 
         cmd = start + source + length + buff
         

@@ -10,7 +10,7 @@
 #define PIN_VIB2_PH 3
 
 #define PIN_BUZZER_TONE 4
-#define PIN_BUZZER_AMP 5
+#define PIN_BUZZER_AMP 3
 
 #define STARTING_CHAR 0xaa
 
@@ -20,7 +20,7 @@ uint8_t ampVib1 = 0;
 uint64_t periodVib1 = 0;
 uint8_t ampVib2 = 0;
 uint8_t ampBuzz = 0;
-uint8_t toneBuzz = 0;
+uint8_t periodBuzz = 0;
 uint16_t timeBuzz = 0;
 
 unsigned long micros_time = 0;
@@ -40,17 +40,17 @@ unsigned long t_us = 0;
 
 #line 39 "/home/adev/dev/bsense/code/teensy/teensy.ino"
 void TimerHandler();
-#line 74 "/home/adev/dev/bsense/code/teensy/teensy.ino"
+#line 83 "/home/adev/dev/bsense/code/teensy/teensy.ino"
 void vib1(int amp, bool dir);
-#line 80 "/home/adev/dev/bsense/code/teensy/teensy.ino"
+#line 89 "/home/adev/dev/bsense/code/teensy/teensy.ino"
 void vib2(int amp);
-#line 87 "/home/adev/dev/bsense/code/teensy/teensy.ino"
-void buzzer(int amp, int tone);
-#line 94 "/home/adev/dev/bsense/code/teensy/teensy.ino"
+#line 96 "/home/adev/dev/bsense/code/teensy/teensy.ino"
+void buzzer(int amp, bool dir);
+#line 103 "/home/adev/dev/bsense/code/teensy/teensy.ino"
 void trigger_pulse(bool state);
-#line 100 "/home/adev/dev/bsense/code/teensy/teensy.ino"
+#line 109 "/home/adev/dev/bsense/code/teensy/teensy.ino"
 void setup();
-#line 123 "/home/adev/dev/bsense/code/teensy/teensy.ino"
+#line 132 "/home/adev/dev/bsense/code/teensy/teensy.ino"
 void loop();
 #line 39 "/home/adev/dev/bsense/code/teensy/teensy.ino"
 void TimerHandler()
@@ -76,10 +76,19 @@ void TimerHandler()
         vib2(false);
     }
 
-    if (t_us > delay_us_buzz && buzz_state)
-    { // if te delay is over and the buzzer is still on: switch it off
-        buzzer(0, 0);
-        buzz_state = false;
+    if (buzz_state)
+    {
+        if (t_us > delay_us_buzz)
+        { // if te delay is over and the buzzer is still on: switch it off
+            buzzer(0, 0);
+            buzz_state = false;
+        }
+        else
+        {
+            // dir is updated based on the frequency
+            bool dir = ((t_us - delay_us_buzz) / (periodBuzz / 2)) % 2; // toggle direction every half period
+            buzzer(ampBuzz, dir); // set the buzzer amplitude and tone
+        }
     }
 
     if (t_us > delay_trig)
@@ -101,10 +110,10 @@ void vib2(int amp) // set the vibration2 amplitude and direction
     vib2_state = amp;
 }
 
-void buzzer(int amp, int tone) // set the buzzer amplitude and tone
+void buzzer(int amp, bool dir) // set the buzzer amplitude and tone
 {
-    analogWrite(PIN_BUZZER_AMP, amp);
-    analogWrite(PIN_BUZZER_TONE, tone);
+    analogWrite(PIN_BUZZER_AMP, amp*4);
+    digitalWrite(PIN_BUZZER_TONE, dir);
     buzz_state = amp;
 }
 
@@ -152,34 +161,33 @@ void loop()
             delay_trig = micros_time + 5000;      // the trigger pulse is 5ms
             switch (source)
             {
-            case 'v':              // trigger a pulse for the vibration1
-                ampVib1 = buff[0]; // read the amplitude of the vibration1
+            case 'v':                                       // trigger a pulse for the vibration1
+                ampVib1 = buff[0];                          // read the amplitude of the vibration1
                 periodVib1 = 1000000 / ((uint32_t)buff[1]); // calculate the period of the vibration1 in microseconds
                 delay_us_vib1 = micros_time + *((uint16_t *)&buff[2]) * ((unsigned long)1000);
                 vib1_state = true; // update the state
                 break;
-            case 'w':              // trigger a pulse for the vibration2
-                ampVib2 =  buff[0]; // read the amplitude of the vibration2
-                periodVib1 = 1000000 / ((uint32_t)buff[1]); // calculate the period of the vibration2 in microseconds
+            case 'w':                                                                          // trigger a pulse for the vibration2
+                ampVib2 = buff[0];                                                             // read the amplitude of the vibration2
+                periodVib1 = 1000000 / ((uint32_t)buff[1]);                                    // calculate the period of the vibration2 in microseconds
                 delay_us_vib2 = micros_time + *((uint16_t *)&buff[2]) * ((unsigned long)1000); // the vibration2 pulse is 1000us*duration
-                vib2_state = true; // update the state
+                vib2_state = true;                                                             // update the state
                 break;
             case 'b':                               // trigger a pulse for the buzzer
                 ampBuzz = buff[0];                  // read the amplitude of the buzzer
-                toneBuzz = buff[1];                 // read the tone of the buzzer
-                timeBuzz = *((uint16_t *)&buff[2]); // read the duration of the buzzer
-                buzzer(ampBuzz, toneBuzz);
-                delay_us_buzz = micros_time + 100 * timeBuzz; // the buzzer pulse is 100us*duration
+                periodBuzz = 1000000 / ((uint32_t)buff[1]); // calculate the period of the buzzer in microseconds
+                delay_us_buzz = micros_time + *((uint16_t *)&buff[2]) * ((unsigned long)1000); // the buzzer pulse is 1000us*duration
+                buzz_state = true; // update the state
                 break;
-            case 'c':                               // combination of Buzzer and Vibration2
-                ampBuzz = buff[0];                  // read the amplitude of the buzzer
-                toneBuzz = buff[1];                 // read the tone of the buzzer
-                timeBuzz = *((uint16_t *)&buff[2]); // read the duration of the buzzer
-                ampVib2 = buff[4];                  // read the amplitude of the vibration2
-                vib2(ampVib2);
-                delay_us_vib2 = micros_time + 100; //*dt; //the vibration2 pulse is 100us
-                buzzer(ampBuzz, toneBuzz);
-                delay_us_buzz = micros_time + 100 * timeBuzz; // the buzzer pulse is 100us*duration
+            case 'c':                               // combination of Buzzer and Vibration1
+                ampVib1 = buff[0];                  // read the amplitude of the vibration1
+                periodVib1 = 1000000 / ((uint32_t)buff[1]); // calculate the period of the vibration1 in microseconds
+                delay_us_vib1 = micros_time + *((uint16_t *)&buff[2]) * ((unsigned long)1000); // the vibration1 pulse is 1000us*duration
+                ampBuzz = buff[4];                  // read the amplitude of the buzzer
+                periodBuzz = 1000000 / ((uint32_t)buff[5]); // calculate the period of the buzzer in microseconds
+                delay_us_buzz = micros_time + *((uint16_t *)&buff[6]) * ((unsigned long)1000); // the buzzer pulse is 1000us*duration
+                vib1_state = true;                  // update the state
+                buzz_state = true;                  // update the state
                 break;
             default:
                 break;

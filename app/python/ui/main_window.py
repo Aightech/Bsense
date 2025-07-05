@@ -29,8 +29,8 @@ class BsenseGUI(ctk.CTk):
         self.exp_names = ["Experiment 1", "Experiment 2", "Experiment 3", "Experiment 4", "Experiment Custom"]
         self.exp_rules = []
         
-        self.exp_rules.append({"Type":"Sequence","Repeat":10,"Content":[{"Type":"stimulus","Content":[{"Type":"Vib1","Amplitude":1,"Frequency":60,"Duration":13,"Deviation":0}]},{"Type":"Delay","Duration":2,"Deviation":0}]})
-
+        self.exp_rules.append({"Type":"Sequence","Repeat":10,"Content":[{"Type":"stimulus","Content":[{"Type":"Buzzer","Amplitude":0.01 ,"Tone":200,"Duration":30,"Deviation":0}]},{"Type":"Delay","Duration":2,"Deviation":0}]})
+        self.exp_rules.append({"Type":"Sequence","Repeat":10,"Content":[{"Type":"stimulus","Content":[{"Type":"Vib1","Amplitude":1 ,"Frequency":170,"Duration":30,"Deviation":0}]},{"Type":"Delay","Duration":2,"Deviation":0}]})
             
         self.current_exp_index = 0
         
@@ -213,7 +213,7 @@ class BsenseGUI(ctk.CTk):
         self.path_label.pack(side=tk.LEFT, padx=5, pady=0)
         self.path_entry = ctk.CTkEntry(self.path_frame)
         self.path_entry.pack(side=tk.LEFT, padx=5, pady=0, expand=True, fill=tk.X)
-        self.path_entry.insert(0, "../code/expCustom_rule.json")
+        self.path_entry.insert(0, "./config/expCustom_rule.json")
         self.path_browser_button = ctk.CTkButton(self.path_frame, text="Browse", command=self.on_path_browser_click)
         self.path_browser_button.pack(side=tk.LEFT, padx=5, pady=5)
         

@@ -1,0 +1,23 @@
+{
+    "Type": "Sequence",
+    "Repeat": 10,
+    "Content": [
+        {
+            "Type": "stimulus",
+            "Content": [
+                {
+                    "Type": "Buzzer",
+                    "Amplitude": 1,
+                    "Tone": 200,
+                    "Duration": 30,
+                    "Deviation": 0
+                }
+            ]
+        },
+        {
+            "Type": "Delay",
+            "Duration": 10,
+            "Deviation": 2
+        }
+    ]
+}
