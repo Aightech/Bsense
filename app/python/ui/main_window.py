@@ -133,11 +133,15 @@ class BsenseGUI(ctk.CTk):
                 self.add_log("Jump to event: " + str(new_idx))
                 
     def on_new_event(self, event):
-        # call back function for the experiment
-        # get the index of the selected item and update treeview
-        #set the new active item in the treeview
-        #print("new event" + str(event))
-        self.exp_treeview.selection_set(self.exp_treeview.get_children()[self.exp.current_idx])
+        # Callback from worker thread - schedule GUI update on main thread
+        self.after(0, self._update_treeview_selection)
+
+    def _update_treeview_selection(self):
+        # Actual GUI update - runs on main thread
+        children = self.exp_treeview.get_children()
+        idx = self.exp.current_idx
+        if children and 0 <= idx < len(children):
+            self.exp_treeview.selection_set(children[idx])
         
     def create_log_frame(self):
         # Frame for logs
@@ -317,15 +321,22 @@ class BsenseGUI(ctk.CTk):
         self.comments_entry.delete(0, tk.END)
         
     def add_log(self, text):
+        # Can be called from worker thread - schedule GUI update on main thread
         log_line = time.strftime("%H:%M:%S") + "[" + str(time.time()) + "] - " + text + "\n"
-        self.log_text.insert(tk.END, log_line)
-        self.log_text.see(tk.END)
+        # Write to file immediately (thread-safe for file I/O)
         if self.file_log_open:
             try:
                 self.file_log.write(log_line)
                 self.file_log.flush()
             except (IOError, OSError):
-                self.file_log_open = False  # Stop trying to write on error
+                self.file_log_open = False
+        # Schedule GUI update on main thread
+        self.after(0, lambda: self._add_log_to_gui(log_line))
+
+    def _add_log_to_gui(self, log_line):
+        # Actual GUI update - runs on main thread
+        self.log_text.insert(tk.END, log_line)
+        self.log_text.see(tk.END)
         
     def update_treeview(self, sequence):
         #delete all the items in the treeview

@@ -52,50 +52,50 @@ This document tracks bugs, limitations, and potential improvements in the Bsense
 
 ## Medium Severity
 
-### 9. GUI Updates from Worker Thread
-**File:** `app/python/ui/main_window.py` (various)
-**Description:** `add_log()` called from worker thread but Tkinter isn't thread-safe. Can cause crashes or corrupted GUI.
-**Fix:** Use `root.after()` to schedule GUI updates on main thread.
+### ~~9. GUI Updates from Worker Thread~~ (FIXED)
+**File:** `app/python/ui/main_window.py`
+~~**Description:** Tkinter not thread-safe, GUI updates from worker thread.~~
+**Fix applied:** Used `after()` to schedule `add_log` and `on_new_event` GUI updates on main thread.
 
-### 10. Empty Sequence Index Error
-**File:** `app/python/ui/main_window.py:140,307,336`
-**Description:** `IndexError` if `current_idx >= len(children)` or sequence is empty.
-**Fix:** Add bounds check before accessing.
+### ~~10. Empty Sequence Index Error~~ (FIXED)
+**File:** `app/python/ui/main_window.py`
+~~**Description:** `IndexError` if sequence empty or index out of bounds.~~
+**Fix applied:** Added bounds check in `_update_treeview_selection()`.
 
-### 11. Bare Except Clause
-**File:** `app/python/core/experiment.py:196`
-**Description:** Catches `KeyboardInterrupt`, `SystemExit` making debugging difficult.
-**Fix:** Catch specific exceptions: `except (IOError, json.JSONDecodeError, KeyError) as e:`
+### ~~11. Bare Except Clause~~ (FIXED)
+**File:** `app/python/core/experiment.py`
+~~**Description:** Catches too many exceptions.~~
+**Fix applied:** Now catches `FileNotFoundError`, `json.JSONDecodeError`, `ValueError` specifically.
 
-### 12. Non-Daemon Thread Blocks Exit
-**File:** `app/python/core/experiment.py:36-37`
-**Description:** Thread prevents Python from exiting if `close()` not called.
-**Fix:** Set `daemon=True` or add timeout to `join()`.
+### ~~12. Non-Daemon Thread Blocks Exit~~ (FIXED)
+**File:** `app/python/core/experiment.py`
+~~**Description:** Thread prevents Python exit.~~
+**Fix applied:** Thread set to `daemon=True`, `join()` has timeout.
 
-### 13. Negative Delay Possible
-**File:** `app/python/core/experiment.py:159`
-**Description:** If `Deviation > Duration`, delay becomes negative.
-**Fix:** Clamp: `dt = max(0, dt)`
+### ~~13. Negative Delay Possible~~ (FIXED)
+**File:** `app/python/core/experiment.py`
+~~**Description:** Deviation could cause negative delay.~~
+**Fix applied:** Added `dt = max(0, dt)` clamping.
 
-### 14. micros() Overflow After ~70 Minutes
-**File:** `code/arduino/arduino.ino:46,51,56,62`
-**Description:** Timing comparisons fail after unsigned 32-bit overflow.
-**Fix:** Use `(micros() - start_time) > duration` pattern.
+### ~~14. micros() Overflow After ~70 Minutes~~ (FIXED)
+**File:** `code/arduino/arduino.ino`
+~~**Description:** Timing comparisons fail after overflow.~~
+**Fix applied:** Changed to `(t_us - start_time) >= duration` pattern with separate start/duration variables.
 
-### 15. Blocking Serial Read
-**File:** `code/teensy/teensy.ino:137`
-**Description:** Partial message arrival hangs entire timer loop.
-**Fix:** Implement state machine or use timeout.
+### ~~15. Blocking Serial Read~~ (FIXED)
+**File:** `code/arduino/arduino.ino`, `code/teensy/teensy.ino`
+~~**Description:** Serial.readBytes blocks indefinitely.~~
+**Fix applied:** Added 100ms timeout with `millis()` check before reading payload.
 
-### 16. No Message Length Validation
-**File:** `code/teensy/teensy.ino:150-177`
-**Description:** Reads `buff[0..3]` without verifying `len >= 4`.
-**Fix:** Validate length before accessing buffer indices.
+### ~~16. No Message Length Validation~~ (FIXED)
+**File:** `code/arduino/arduino.ino`, `code/teensy/teensy.ino`
+~~**Description:** No validation of expected message length per command.~~
+**Fix applied:** Added expected length validation (5 for v/w/b, 10 for c) before processing.
 
-### 17. Unvalidated Signal Format
-**File:** `app/python/core/arduino_communication.py:19-68`
-**Description:** Assumes tuple structure without checking length/types.
-**Fix:** Validate signal structure before processing.
+### ~~17. Unvalidated Signal Format~~ (FIXED)
+**File:** `app/python/core/arduino_communication.py`
+~~**Description:** Assumes tuple structure without checking.~~
+**Fix applied:** Added validation for signal type, tuple length, and element count per command type.
 
 ---
 

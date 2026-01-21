@@ -28,13 +28,18 @@ uint16_t toneBuzz = 0;
 uint16_t timeBuzz = 0;
 
 unsigned long micros_time = 0;
-unsigned long delay_ms_vib1 = 0;
-unsigned long delay_ms_vib2 = 0;
-unsigned long delay_ms_buzz = 0;
-unsigned long delay_trig = 0;
+unsigned long start_us_vib1 = 0;
+unsigned long duration_us_vib1 = 0;
+unsigned long start_us_vib2 = 0;
+unsigned long duration_us_vib2 = 0;
+unsigned long start_us_buzz = 0;
+unsigned long duration_us_buzz = 0;
+unsigned long start_us_trig = 0;
+unsigned long duration_us_trig = 5000;  // 5ms trigger pulse
 bool vib1_state = false;
 bool vib2_state = false;
 bool buzz_state = false;
+bool trig_state = false;
 
 uint8_t source;
 uint8_t len;
@@ -45,23 +50,25 @@ unsigned long t_us = 0;
 void TimerHandler()
 {
   t_us = micros();
-  if (t_us > delay_ms_vib1 && vib1_state)
-  { // if the delay is over and the pulse is still on: turn it off
+
+  // Use elapsed time comparisons to handle micros() overflow correctly
+  if (vib1_state && (t_us - start_us_vib1) >= duration_us_vib1)
+  {
     vib1(false);
   }
 
-  if (t_us > delay_ms_vib2 && vib2_state)
-  { // if the delay is over and the pulse is still on: turn it off
+  if (vib2_state && (t_us - start_us_vib2) >= duration_us_vib2)
+  {
     vib2(false);
   }
 
-  if (t_us > delay_ms_buzz && buzz_state)
-  { // if te delay is over and the buzzer is still on: switch it off
+  if (buzz_state && (t_us - start_us_buzz) >= duration_us_buzz)
+  {
     buzzer(0, 0);
     buzz_state = false;
   }
 
-  if (t_us > delay_trig)
+  if (trig_state && (t_us - start_us_trig) >= duration_us_trig)
   {
     trigger_pulse(false);
   }
@@ -98,6 +105,7 @@ void trigger_pulse(bool state) // trigger a pulse on the trigger pin
 {
   digitalWrite(PIN_TRIG, state);
   digitalWrite(LED_BUILTIN, state);
+  trig_state = state;
 }
 
 void setup()
@@ -140,30 +148,50 @@ void loop()
         while (Serial.available()) Serial.read(); // flush invalid data
         return;
       }
+      // Wait for remaining data with timeout (non-blocking check)
+      unsigned long wait_start = millis();
+      while (Serial.available() < len && (millis() - wait_start) < 100) {
+        // Brief yield, timeout after 100ms
+      }
+      if (Serial.available() < len) {
+        return; // Timeout - incomplete message, skip
+      }
       Serial.readBytes((char *)&buff, len); // read the message
+
+      // Validate message length for each command type
+      uint8_t expected_len = 0;
+      if (source == 'v' || source == 'w' || source == 'b') expected_len = 5;
+      else if (source == 'c') expected_len = 10;
+      if (expected_len > 0 && len < expected_len) {
+        return; // Invalid message length
+      }
+
       micros_time = micros();          // get the current time
       trigger_pulse(true);             // trigger a pulse on the trigger pin
-      delay_trig = micros_time + 5000; // the trigger pulse is 5ms
+      start_us_trig = micros_time;     // record start time for trigger
       switch (source)
       {
       case 'v': // trigger a pulse for the vibration1
         ampVib1 = buff[0]; // read the amplitude of the vibration1
         freqVib1 = *((uint16_t *)&buff[1]); // read the frequency (2 bytes)
         vib1(ampVib1);
-        delay_ms_vib1 = micros_time + 100; //*dt; //the vibration1 pulse is 100us
+        start_us_vib1 = micros_time;
+        duration_us_vib1 = 100; // the vibration1 pulse is 100us
         break;
       case 'w': // trigger a pulse for the vibration2
         ampVib2 = buff[0]; // read the amplitude of the vibration2
         freqVib2 = *((uint16_t *)&buff[1]); // read the frequency (2 bytes)
         vib2(ampVib2);
-        delay_ms_vib2 = micros_time + 100; //*dt; //the vibration2 pulse is 100us
+        start_us_vib2 = micros_time;
+        duration_us_vib2 = 100; // the vibration2 pulse is 100us
         break;
       case 'b': // trigger a pulse for the buzzer
         ampBuzz = buff[0]; // read the amplitude of the buzzer
         toneBuzz = *((uint16_t *)&buff[1]); // read the tone of the buzzer (2 bytes)
-        timeBuzz = *((uint16_t *)&buff[3]); // read the duration of the buzzer
+        timeBuzz = *((uint16_t *)&buff[3]); // read the duration of the buzzer (ms)
         buzzer(ampBuzz, toneBuzz);
-        delay_ms_buzz = micros_time + 100 * timeBuzz; // the buzzer pulse is 100us*duration
+        start_us_buzz = micros_time;
+        duration_us_buzz = (unsigned long)timeBuzz * 1000; // convert ms to us
         break;
       case 'c':// combination of Buzzer and Vibration1
         ampVib1 = buff[0]; // read the amplitude of the vibration1
@@ -171,11 +199,13 @@ void loop()
         // duration at buff[3-4]
         ampBuzz = buff[5]; // read the amplitude of the buzzer
         toneBuzz = *((uint16_t *)&buff[6]); // read the tone of the buzzer (2 bytes)
-        timeBuzz = *((uint16_t *)&buff[8]); // read the duration of the buzzer
+        timeBuzz = *((uint16_t *)&buff[8]); // read the duration of the buzzer (ms)
         vib1(ampVib1);
-        delay_ms_vib1 = micros_time + 100; //*dt; //the vibration1 pulse is 100us
+        start_us_vib1 = micros_time;
+        duration_us_vib1 = 100; // the vibration1 pulse is 100us
         buzzer(ampBuzz, toneBuzz);
-        delay_ms_buzz = micros_time + 100 * timeBuzz; // the buzzer pulse is 100us*duration
+        start_us_buzz = micros_time;
+        duration_us_buzz = (unsigned long)timeBuzz * 1000; // convert ms to us
         break;
       default:
         break;

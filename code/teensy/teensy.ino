@@ -156,7 +156,24 @@ void loop()
                 while (Serial.available()) Serial.read(); // flush invalid data
                 return;
             }
+            // Wait for remaining data with timeout (non-blocking check)
+            unsigned long wait_start = millis();
+            while (Serial.available() < len && (millis() - wait_start) < 100) {
+                // Brief yield, timeout after 100ms
+            }
+            if (Serial.available() < len) {
+                return; // Timeout - incomplete message, skip
+            }
             Serial.readBytes((char *)&buff, len); // read the message
+
+            // Validate message length for each command type
+            uint8_t expected_len = 0;
+            if (source == 'v' || source == 'w' || source == 'b') expected_len = 5;
+            else if (source == 'c') expected_len = 10;
+            if (expected_len > 0 && len < expected_len) {
+                return; // Invalid message length
+            }
+
             micros_time = micros();               // get the current time
             trigger_pulse(true);                  // trigger a pulse on the trigger pin
             delay_trig = micros_time + 5000;      // the trigger pulse is 5ms

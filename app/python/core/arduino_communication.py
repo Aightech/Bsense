@@ -41,11 +41,21 @@ class ArduinoCom:
         - signal[3] is the duration in ms (0-65535)
         For 'c' (combined): signal[4]=ampBuzz, signal[5]=freqBuzz, signal[6]=durBuzz
         """
+        # Validate signal format
+        if not isinstance(signal, (tuple, list)) or len(signal) < 1:
+            raise ValueError("Signal must be a tuple/list with at least 1 element")
+        if signal[0] not in ('v', 'w', 'b', 'c'):
+            raise ValueError(f"Invalid signal type: {signal[0]}")
+        if signal[0] in ('v', 'w', 'b') and len(signal) < 4:
+            raise ValueError(f"Signal type '{signal[0]}' requires 4 elements (type, amp, freq, dur)")
+        if signal[0] == 'c' and len(signal) < 7:
+            raise ValueError("Signal type 'c' requires 7 elements (type, ampV, freqV, durV, ampB, freqB, durB)")
+
         #the cmd must start with 0xaa
         start = int(0xaa).to_bytes(1, byteorder='big', signed=False)
         #transform the char into bytes
         source = ord(signal[0]).to_bytes(1, byteorder='big', signed=False)
-        
+
         if signal[0] == 'b':
             #buzzer
             length = int(5).to_bytes(1, byteorder='big', signed=False)
