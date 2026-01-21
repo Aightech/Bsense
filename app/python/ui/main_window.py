@@ -1,13 +1,14 @@
 import tkinter as tk
-import customtkinter as ctk
-
-import tkinter as tk
 import tkinter.ttk as ttk
 from tkinter import filedialog
 import customtkinter as ctk
 import threading
-from core.experiment import Experiment
 import time
+import sys
+import logging
+from core.experiment import Experiment
+
+logger = logging.getLogger(__name__)
 #set theme
 ctk.set_default_color_theme("dark-blue") 
 
@@ -90,7 +91,7 @@ class BsenseGUI(ctk.CTk):
         
     #when the window is closed
     def on_closing(self):
-        print("closing")
+        logger.info("Closing application")
         self.exp.close()
         if self.file_log_open:
             self.file_log.close()
@@ -167,7 +168,14 @@ class BsenseGUI(ctk.CTk):
         self.connection_label = ctk.CTkLabel(self.device_frame, text="Device: ")
         self.connection_label.pack(side=tk.LEFT, padx=5, pady=0)
         self.connection_entry = ctk.CTkEntry(self.device_frame)
-        self.connection_entry.insert(0, "COM3")
+        # Platform-appropriate default port
+        if sys.platform.startswith('win'):
+            default_port = "COM3"
+        elif sys.platform.startswith('darwin'):
+            default_port = "/dev/tty.usbmodem*"
+        else:  # Linux
+            default_port = "/dev/ttyUSB0"
+        self.connection_entry.insert(0, default_port)
         self.connection_entry.pack(side=tk.LEFT, padx=10, pady=10, expand=True, fill=tk.X)
         self.connection_button = ctk.CTkButton(self.device_frame, text="Connect", command=self.on_button_connect_click, width=10)
         self.connection_button.pack(side=tk.LEFT, padx=10, pady=10)
@@ -262,7 +270,7 @@ class BsenseGUI(ctk.CTk):
     def on_combo_select(self, event):
         selected_exp = self.exp_combo.get()
         self.add_log("Experiment selected: " + selected_exp)
-        print("selected exp: " + selected_exp)
+        logger.debug(f"Selected experiment: {selected_exp}")
         if selected_exp == "Experiment Custom" and self.current_exp_index < len(self.exp_rules):#if previous experiment was not custom
             #increase the size of the window
             self.update_idletasks()

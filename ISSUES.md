@@ -101,25 +101,25 @@ This document tracks bugs, limitations, and potential improvements in the Bsense
 
 ## Low Severity
 
-### 18. Hardcoded COM3 Port
-**File:** `app/python/ui/main_window.py:166`
-**Description:** Default "COM3" fails on Linux/Mac.
-**Fix:** Auto-detect available ports or use platform-appropriate default.
+### ~~18. Hardcoded COM3 Port~~ (FIXED)
+**File:** `app/python/ui/main_window.py`
+~~**Description:** Default "COM3" fails on Linux/Mac.~~
+**Fix applied:** Platform detection using `sys.platform` - COM3 (Windows), /dev/ttyUSB0 (Linux), /dev/tty.usbmodem* (Mac).
 
-### 19. No Connection Retry Logic
+### ~~19. No Connection Retry Logic~~ (FIXED)
 **File:** `app/python/core/arduino_communication.py`
-**Description:** Single failed connection attempt exits immediately.
-**Fix:** Add retry with exponential backoff.
+~~**Description:** Single failed connection attempt exits immediately.~~
+**Fix applied:** Added `retries` and `retry_delay` parameters with exponential backoff (default: 3 retries).
 
-### 20. Print Statements Instead of Logging
-**File:** `app/python/core/experiment.py:91,164`
-**Description:** Debug output goes to stderr, not captured in log files.
-**Fix:** Use `logging` module.
+### ~~20. Print Statements Instead of Logging~~ (FIXED)
+**File:** `app/python/core/arduino_communication.py`, `app/python/ui/main_window.py`, `app/python/main.py`
+~~**Description:** Debug output goes to stderr, not captured in log files.~~
+**Fix applied:** Replaced all print() with logging module. Configured in main.py with DEBUG level when -d flag used.
 
-### 21. Duplicate Import
-**File:** `app/python/ui/main_window.py:1,4`
-**Description:** `import tkinter as tk` appears twice.
-**Fix:** Remove duplicate.
+### ~~21. Duplicate Import~~ (FIXED)
+**File:** `app/python/ui/main_window.py`
+~~**Description:** `import tkinter as tk` appears twice.~~
+**Fix applied:** Removed duplicate imports, cleaned up import section.
 
 ---
 

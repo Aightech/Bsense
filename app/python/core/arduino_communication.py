@@ -1,5 +1,8 @@
 import serial
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ArduinoCom:
     def __init__(self):
@@ -7,17 +10,34 @@ class ArduinoCom:
         self.arduino = None
         pass
 
-    def connect(self, path):
+    def connect(self, path, retries=3, retry_delay=1.0):
+        """Connect to Arduino with retry logic.
+
+        Args:
+            path: Serial port path (e.g., COM3, /dev/ttyUSB0)
+            retries: Number of connection attempts (default: 3)
+            retry_delay: Delay between retries in seconds (default: 1.0)
+        """
         # Close existing connection if any
         self.disconnect()
         self.path = path
-        try:
-            self.arduino = serial.Serial(path, 115200, timeout=1)
-            time.sleep(2)
-        except serial.SerialException as e:
-            raise Exception(f"Arduino not found at {path}: {e}")
-        except OSError as e:
-            raise Exception(f"Cannot open port {path}: {e}")
+        last_error = None
+
+        for attempt in range(retries):
+            try:
+                self.arduino = serial.Serial(path, 115200, timeout=1)
+                time.sleep(2)  # Wait for Arduino to reset
+                return  # Success
+            except serial.SerialException as e:
+                last_error = f"Arduino not found at {path}: {e}"
+            except OSError as e:
+                last_error = f"Cannot open port {path}: {e}"
+
+            # Wait before retry (with exponential backoff)
+            if attempt < retries - 1:
+                time.sleep(retry_delay * (attempt + 1))
+
+        raise Exception(last_error)
 
     def disconnect(self):
         """Close the serial connection if open."""
@@ -82,15 +102,11 @@ class ArduinoCom:
             buff = ampVib1 + freqVib1 + dtVib1 + ampBuzz + freqBuzz + dtBuzz
 
         cmd = start + source + length + buff
-        
+        cmd_hex = " ".join("{:02x}".format(c) for c in cmd)
+
         if self.arduino is not None:
             self.arduino.write(cmd)
-            print("[SENT] cmd [" + signal[0] + "]: ", end="") 
-            print(" ".join("{:02x}".format(c) for c in cmd), end="")
-            print(" (len: " + str(len(cmd)) + ")")
+            logger.debug(f"[SENT] cmd [{signal[0]}]: {cmd_hex} (len: {len(cmd)})")
         else:
-            #print each byte of the command
-            print("[UNSENT] cmd [" + signal[0] + "]: ", end="") 
-            print(" ".join("{:02x}".format(c) for c in cmd), end="")
-            print(" (len: " + str(len(cmd)) + ")")
+            logger.warning(f"[UNSENT] cmd [{signal[0]}]: {cmd_hex} (len: {len(cmd)})")
             
