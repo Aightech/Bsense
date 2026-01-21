@@ -23,34 +23,30 @@ This document tracks bugs, limitations, and potential improvements in the Bsense
 
 ## High Severity
 
-### 4. Serial Port Resource Leak
-**File:** `app/python/core/arduino_communication.py:10-17`
-**Description:** Previous connection never closed before opening new one. Generic `except:` hides real errors.
-**Fix:** Close existing connection before opening new; catch specific exceptions.
+### ~~4. Serial Port Resource Leak~~ (FIXED)
+**File:** `app/python/core/arduino_communication.py`
+~~**Description:** Previous connection never closed before opening new one.~~
+**Fix applied:** Added `disconnect()` method, call it before new connection, catch specific exceptions.
 
-### 5. Amplitude Value Overflow
-**File:** `app/python/core/arduino_communication.py:35,42,49,52`
-**Description:** Amplitude values > 1.0 cause `OverflowError` when converting to single byte.
-```python
-amp = int(signal[1]*255).to_bytes(1, byteorder='big', signed=False)
-# signal[1] = 1.5 → 382 → OverflowError
-```
-**Fix:** Clamp values: `int(max(0, min(255, signal[1]*255)))`
+### ~~5. Amplitude Value Overflow~~ (FIXED)
+**File:** `app/python/core/arduino_communication.py`
+~~**Description:** Amplitude values > 1.0 cause `OverflowError`.~~
+**Fix applied:** Clamped values with `max(0, min(255, signal[1]*255))`.
 
-### 6. Division by Zero in Frequency Calculation
-**File:** `code/teensy/teensy.ino:152`
-**Description:** `periodVib1 = 1000000 / buff[1]` crashes if frequency byte is 0.
-**Fix:** Guard: `if (buff[1] == 0) return;`
+### ~~6. Division by Zero in Frequency Calculation~~ (FIXED)
+**File:** `code/teensy/teensy.ino`
+~~**Description:** Division by zero when frequency is 0.~~
+**Fix applied:** Added guard `(freqVib1 > 0) ? (1000000 / freqVib1) : 0`.
 
-### 7. Flawed Frequency Toggle Logic
-**File:** `code/teensy/teensy.ino:52`
-**Description:** Division operation inside timer handler loses precision for high frequencies.
-**Fix:** Use counter-based toggle instead of division.
+### ~~7. Flawed Frequency Toggle Logic~~ (FIXED)
+**File:** `code/teensy/teensy.ino`
+~~**Description:** Using wrong timestamps and potential division by zero in timer handler.~~
+**Fix applied:** Added start/end time tracking, proper elapsed time calculation, half_period > 0 guards.
 
-### 8. Unhandled File Write Error
-**File:** `app/python/ui/main_window.py:366-370`
-**Description:** Log file creation fails silently if directory not writable or disk full.
-**Fix:** Wrap in try-except, use configurable log directory.
+### ~~8. Unhandled File Write Error~~ (FIXED)
+**File:** `app/python/ui/main_window.py`
+~~**Description:** Log file creation fails silently if directory not writable.~~
+**Fix applied:** Wrapped file operations in try-except, gracefully disable logging on error.
 
 ---
 

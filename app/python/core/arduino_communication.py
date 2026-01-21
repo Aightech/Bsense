@@ -8,13 +8,29 @@ class ArduinoCom:
         pass
 
     def connect(self, path):
-        # Connect to Arduino
+        # Close existing connection if any
+        self.disconnect()
         self.path = path
         try:
             self.arduino = serial.Serial(path, 115200, timeout=1)
             time.sleep(2)
-        except:
-            raise Exception("Arduino not found at " + path)
+        except serial.SerialException as e:
+            raise Exception(f"Arduino not found at {path}: {e}")
+        except OSError as e:
+            raise Exception(f"Cannot open port {path}: {e}")
+
+    def disconnect(self):
+        """Close the serial connection if open."""
+        if self.arduino is not None:
+            try:
+                self.arduino.close()
+            except Exception:
+                pass
+            self.arduino = None
+
+    def is_connected(self):
+        """Check if serial port is open and connected."""
+        return self.arduino is not None and self.arduino.is_open
 
     def send_signal(self, signal):
         """Send a signal to the Arduino

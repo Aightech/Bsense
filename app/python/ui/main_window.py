@@ -317,11 +317,15 @@ class BsenseGUI(ctk.CTk):
         self.comments_entry.delete(0, tk.END)
         
     def add_log(self, text):
-        self.log_text.insert(tk.END, time.strftime("%H:%M:%S") + "[" + str(time.time()) + "] - " + text + "\n")
-        self.log_text.see(tk.END) 
+        log_line = time.strftime("%H:%M:%S") + "[" + str(time.time()) + "] - " + text + "\n"
+        self.log_text.insert(tk.END, log_line)
+        self.log_text.see(tk.END)
         if self.file_log_open:
-            self.file_log.write(time.strftime("%H:%M:%S") + "[" + str(time.time()) + "] - " + text + "\n")
-            self.file_log.flush()
+            try:
+                self.file_log.write(log_line)
+                self.file_log.flush()
+            except (IOError, OSError):
+                self.file_log_open = False  # Stop trying to write on error
         
     def update_treeview(self, sequence):
         #delete all the items in the treeview
@@ -364,9 +368,13 @@ class BsenseGUI(ctk.CTk):
             self.validation_button.configure(state="disabled", fg_color="grey")
             #create log file
             filename = self.subject_entry.get() + "_" + time.strftime("%Y-%m-%d_%H-%M-%S") + ".log"
-            self.file_log = open(filename, "w")
-            #write evrything in the log text widget to the file
-            self.file_log.write(self.log_text.get("1.0", tk.END))
-            self.file_log_open = True
+            try:
+                self.file_log = open(filename, "w")
+                #write everything in the log text widget to the file
+                self.file_log.write(self.log_text.get("1.0", tk.END))
+                self.file_log_open = True
+            except (IOError, OSError) as e:
+                self.add_log(f"Warning: Could not create log file: {e}")
+                self.file_log_open = False
             self.command_GO_button.configure(state="normal", fg_color=['#3a7ebf', '#1f538d'])
             self.exp_combo.configure(state="normal", fg_color="white")
