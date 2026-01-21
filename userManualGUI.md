@@ -90,6 +90,47 @@ Similar to a sequence but with the ability to randomly omit certain repetitions,
 - **Content**: The normal sequence content.
 - **Dropout_content**: The content to use when a repetition is dropped.
 
+### Randomized_sequence
+
+Creates a randomized sequence of stimuli from multiple intensity levels, ensuring no single intensity repeats more than a specified number of times consecutively. Useful for experiments requiring counterbalanced stimulus presentation.
+
+- **Type**: Must be `"Randomized_sequence"`.
+- **Max_consecutive**: Maximum times any single stimulus type can appear consecutively (e.g., 3 means no more than 3 in a row).
+- **Stimuli**: Array of stimulus definitions, each with:
+  - **Repeat**: How many times this stimulus appears in the total sequence.
+  - **Label**: (Optional) A label for logging/display (e.g., "33%", "Low").
+  - **Content**: The stimulus definition (same format as stimulus Content items).
+- **Delay**: (Optional) A Delay object inserted between each stimulus.
+
+#### Example: Three intensity levels, 20 repeats each
+
+```json
+{
+  "Type": "Randomized_sequence",
+  "Max_consecutive": 3,
+  "Delay": {"Type": "Delay", "Duration": 2, "Deviation": 0.5},
+  "Stimuli": [
+    {
+      "Repeat": 20,
+      "Label": "33%",
+      "Content": {"Type": "Vib1", "Amplitude": 0.33, "Frequency": 170, "Duration": 100}
+    },
+    {
+      "Repeat": 20,
+      "Label": "66%",
+      "Content": {"Type": "Vib1", "Amplitude": 0.66, "Frequency": 170, "Duration": 100}
+    },
+    {
+      "Repeat": 20,
+      "Label": "100%",
+      "Content": {"Type": "Vib1", "Amplitude": 1.0, "Frequency": 170, "Duration": 100}
+    }
+  ]
+}
+```
+
+This creates 60 total stimulations (20 × 3 intensities), randomized with no intensity appearing more than 3 times in a row, with a 2±0.5 second delay between each.
+
 ## Example Configuration
 
 ```json
@@ -158,6 +199,7 @@ Similar to a sequence but with the ability to randomly omit certain repetitions,
 
 ## Tips for Writing Configuration Files
 
+- **Case-insensitive**: All field names and type values are case-insensitive. You can write `"Type": "Sequence"`, `"type": "sequence"`, or even `"TYPE": "SEQUENCE"` - they all work the same.
 - Repeat values allow for repeating sequences or stimuli, creating complex experimental patterns without duplicating definitions.
 - Utilize Deviation to introduce variability into your experiment, making it less predictable and more realistic.
 - Dropout_sequence allows for the creation of dynamic experiments where certain sequences can be randomly omitted, introducing unpredictability and variability.

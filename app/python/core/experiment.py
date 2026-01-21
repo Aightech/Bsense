@@ -24,6 +24,51 @@ from core.arduino_communication import ArduinoCom
         
 
 class Experiment:
+    # Canonical key names (lowercase -> canonical)
+    _KEY_MAP = {
+        # Rule types
+        "type": "Type",
+        "sequence": "Sequence",
+        "stimulus": "stimulus",  # kept lowercase for backwards compat
+        "delay": "Delay",
+        "dropout_sequence": "Dropout_sequence",
+        "randomized_sequence": "Randomized_sequence",
+        # Stimulus types
+        "buzzer": "Buzzer",
+        "vib1": "Vib1",
+        "vib2": "Vib2",
+        "buzzvib1": "BuzzVib1",
+        # Common fields
+        "repeat": "Repeat",
+        "content": "Content",
+        "duration": "Duration",
+        "deviation": "Deviation",
+        "amplitude": "Amplitude",
+        "frequency": "Frequency",
+        "tone": "Tone",
+        "label": "Label",
+        # Dropout_sequence fields
+        "number_drop": "Number_drop",
+        "dropout_content": "Dropout_content",
+        # Randomized_sequence fields
+        "max_consecutive": "Max_consecutive",
+        "stimuli": "Stimuli",
+        # BuzzVib1 fields
+        "amplitude_vib1": "Amplitude_vib1",
+        "frequency_vib1": "Frequency_vib1",
+        "duration_vib1": "Duration_vib1",
+        "amplitude_buzz": "Amplitude_buzz",
+        "tone_buzz": "Tone_buzz",
+        "duration_buzz": "Duration_buzz",
+        "deviation_amplitude_vib1": "Deviation_amplitude_vib1",
+        "deviation_duration_vib1": "Deviation_duration_vib1",
+        "deviation_amplitude_buzz": "Deviation_amplitude_buzz",
+        "deviation_tone_buzz": "Deviation_tone_buzz",
+        "deviation_duration_buzz": "Deviation_duration_buzz",
+        "deviation_tone": "Deviation_tone",
+        "deviation_duration": "Deviation_duration",
+    }
+
     def __init__(self):
         # Experiment initialization
         self.log_cb = self.__default_cb
@@ -134,6 +179,8 @@ class Experiment:
             return self.__read_delay(rules)
         elif rule_type == "Dropout_sequence":
             return self.__read_dropout_sequence(rules)
+        elif rule_type == "Randomized_sequence":
+            return self.__read_randomized_sequence(rules)
         else:
             raise ValueError(f"Unknown rule type: {rule_type}")
         
@@ -237,7 +284,176 @@ class Experiment:
                 for item in rules["Content"]:
                     arr += self.__read_type(item)
         return arr
-    
+
+    def __read_randomized_sequence(self, rules):
+        """Read a randomized sequence with max consecutive constraint.
+
+        Example JSON:
+        {
+            "Type": "Randomized_sequence",
+            "Max_consecutive": 3,
+            "Delay": {"Type": "Delay", "Duration": 2, "Deviation": 0.5},
+            "Stimuli": [
+                {"Repeat": 20, "Label": "33%", "Content": {"Type": "Vib1", ...}},
+                {"Repeat": 20, "Label": "66%", "Content": {"Type": "Vib1", ...}},
+                {"Repeat": 20, "Label": "100%", "Content": {"Type": "Vib1", ...}}
+            ]
+        }
+        """
+        for field in ("Max_consecutive", "Stimuli"):
+            if field not in rules:
+                raise ValueError(f"Randomized_sequence requires '{field}' field")
+
+        max_consec = rules["Max_consecutive"]
+        stimuli_defs = rules["Stimuli"]
+        delay_def = rules.get("Delay", None)
+
+        if not isinstance(stimuli_defs, list) or len(stimuli_defs) < 2:
+            raise ValueError("Randomized_sequence 'Stimuli' must be a list with at least 2 items")
+        if not isinstance(max_consec, int) or max_consec < 1:
+            raise ValueError("Randomized_sequence 'Max_consecutive' must be a positive integer")
+
+        # Build list of (stimulus_index, stimulus_def) for each repeat
+        all_stimuli = []
+        for stim_idx, stim_def in enumerate(stimuli_defs):
+            if "Repeat" not in stim_def or "Content" not in stim_def:
+                raise ValueError(f"Stimuli[{stim_idx}] requires 'Repeat' and 'Content' fields")
+            repeat_count = stim_def["Repeat"]
+            label = stim_def.get("Label", f"Stim{stim_idx}")
+            for _ in range(repeat_count):
+                all_stimuli.append((stim_idx, stim_def["Content"], label))
+
+        # Shuffle with max consecutive constraint
+        shuffled = self.__shuffle_with_constraint(all_stimuli, max_consec)
+
+        # Log the randomized order for reproducibility
+        order_str = "".join(str(s[0]) for s in shuffled)
+        self.log_cb(f"Randomized order ({len(shuffled)} stimuli): {order_str}")
+
+        # Build the final sequence
+        arr = []
+        for i, (stim_idx, content, label) in enumerate(shuffled):
+            # Parse the stimulus content
+            stim_events = self.__read_type({"Type": "stimulus", "Content": [content]})
+            # Update label to include the original label
+            for event in stim_events:
+                event[1] = f"{label}"
+            arr.extend(stim_events)
+
+            # Add delay between stimuli (except after the last one)
+            if delay_def is not None and i < len(shuffled) - 1:
+                arr.extend(self.__read_type(delay_def))
+
+        return arr
+
+    def __shuffle_with_constraint(self, items, max_consecutive, max_attempts=1000):
+        """Shuffle items ensuring no value appears more than max_consecutive times in a row.
+
+        Args:
+            items: List of (index, content, label) tuples
+            max_consecutive: Maximum allowed consecutive items with same index
+            max_attempts: Maximum shuffle attempts before giving up
+
+        Returns:
+            Shuffled list satisfying the constraint
+        """
+        for attempt in range(max_attempts):
+            shuffled = items[:]
+            random.shuffle(shuffled)
+
+            if self.__check_consecutive_constraint(shuffled, max_consecutive):
+                return shuffled
+
+            # Try to fix violations by swapping
+            shuffled = self.__fix_consecutive_violations(shuffled, max_consecutive)
+            if self.__check_consecutive_constraint(shuffled, max_consecutive):
+                return shuffled
+
+        # If we couldn't satisfy constraint, log warning and return best effort
+        self.log_cb(f"Warning: Could not satisfy Max_consecutive={max_consecutive} after {max_attempts} attempts")
+        return shuffled
+
+    def __check_consecutive_constraint(self, items, max_consecutive):
+        """Check if no index appears more than max_consecutive times in a row."""
+        if len(items) <= 1:
+            return True
+
+        consecutive_count = 1
+        prev_idx = items[0][0]
+
+        for i in range(1, len(items)):
+            curr_idx = items[i][0]
+            if curr_idx == prev_idx:
+                consecutive_count += 1
+                if consecutive_count > max_consecutive:
+                    return False
+            else:
+                consecutive_count = 1
+            prev_idx = curr_idx
+
+        return True
+
+    def __fix_consecutive_violations(self, items, max_consecutive):
+        """Attempt to fix consecutive violations by swapping elements."""
+        items = items[:]  # work on a copy
+        n = len(items)
+
+        for _ in range(n * 2):  # limit iterations
+            # Find first violation
+            violation_pos = -1
+            consecutive_count = 1
+            prev_idx = items[0][0]
+
+            for i in range(1, n):
+                curr_idx = items[i][0]
+                if curr_idx == prev_idx:
+                    consecutive_count += 1
+                    if consecutive_count > max_consecutive:
+                        violation_pos = i
+                        break
+                else:
+                    consecutive_count = 1
+                prev_idx = curr_idx
+
+            if violation_pos == -1:
+                break  # no violations found
+
+            # Find a position to swap with (different index, not creating new violation)
+            violation_idx = items[violation_pos][0]
+            for swap_pos in range(n):
+                if swap_pos == violation_pos:
+                    continue
+                if items[swap_pos][0] == violation_idx:
+                    continue
+
+                # Check if swap would be valid
+                items[violation_pos], items[swap_pos] = items[swap_pos], items[violation_pos]
+
+                # Quick check around both positions
+                valid = True
+                for check_pos in [violation_pos, swap_pos]:
+                    start = max(0, check_pos - max_consecutive)
+                    end = min(n, check_pos + max_consecutive + 1)
+                    count = 1
+                    for j in range(start + 1, end):
+                        if items[j][0] == items[j-1][0]:
+                            count += 1
+                            if count > max_consecutive:
+                                valid = False
+                                break
+                        else:
+                            count = 1
+                    if not valid:
+                        break
+
+                if valid:
+                    break  # keep the swap
+                else:
+                    # undo swap
+                    items[violation_pos], items[swap_pos] = items[swap_pos], items[violation_pos]
+
+        return items
+
     def __stimulus(self, signal):
         # Stimulus logic
         try:
@@ -266,10 +482,36 @@ class Experiment:
             raise Exception(f"Error: invalid experiment format in {path}: {e}")
         
     def from_dict(self, rules):
+        # Normalize keys to canonical form (case-insensitive)
+        rules = self.__normalize(rules)
         # Validate schema first (catches errors before playback)
         self.__validate_schema(rules)
         self.sequence = self.__read_type(rules)
         self.current_idx = 0
+
+    def __normalize(self, obj):
+        """Recursively normalize dictionary keys and type values to canonical form.
+
+        This makes the protocol case-insensitive, so users can write:
+        - "type": "sequence" instead of "Type": "Sequence"
+        - "AMPLITUDE": 0.5 instead of "Amplitude": 0.5
+        """
+        if isinstance(obj, dict):
+            normalized = {}
+            for key, value in obj.items():
+                # Normalize key
+                canonical_key = self._KEY_MAP.get(key.lower(), key)
+                # Recursively normalize value
+                normalized_value = self.__normalize(value)
+                # Special handling for "Type" values - normalize them too
+                if canonical_key == "Type" and isinstance(normalized_value, str):
+                    normalized_value = self._KEY_MAP.get(normalized_value.lower(), normalized_value)
+                normalized[canonical_key] = normalized_value
+            return normalized
+        elif isinstance(obj, list):
+            return [self.__normalize(item) for item in obj]
+        else:
+            return obj
 
     def __validate_schema(self, rules, path="root"):
         """Validate JSON schema recursively. Raises ValueError with path on error."""
@@ -320,6 +562,28 @@ class Experiment:
                 self.__validate_schema(item, f"{path}.Content[{i}]")
             for i, item in enumerate(rules["Dropout_content"]):
                 self.__validate_schema(item, f"{path}.Dropout_content[{i}]")
+
+        elif rule_type == "Randomized_sequence":
+            for field in ("Max_consecutive", "Stimuli"):
+                if field not in rules:
+                    raise ValueError(f"Randomized_sequence missing '{field}' at {path}")
+            if not isinstance(rules["Max_consecutive"], int) or rules["Max_consecutive"] < 1:
+                raise ValueError(f"Randomized_sequence 'Max_consecutive' must be positive integer at {path}")
+            if not isinstance(rules["Stimuli"], list) or len(rules["Stimuli"]) < 2:
+                raise ValueError(f"Randomized_sequence 'Stimuli' must be list with at least 2 items at {path}")
+            for i, stim in enumerate(rules["Stimuli"]):
+                if not isinstance(stim, dict):
+                    raise ValueError(f"Stimuli[{i}] must be an object at {path}")
+                if "Repeat" not in stim:
+                    raise ValueError(f"Stimuli[{i}] missing 'Repeat' at {path}")
+                if "Content" not in stim:
+                    raise ValueError(f"Stimuli[{i}] missing 'Content' at {path}")
+                if not isinstance(stim["Repeat"], int) or stim["Repeat"] < 1:
+                    raise ValueError(f"Stimuli[{i}] 'Repeat' must be positive integer at {path}")
+                self.__validate_stimulus_item(stim["Content"], f"{path}.Stimuli[{i}].Content")
+            # Validate optional Delay
+            if "Delay" in rules:
+                self.__validate_schema(rules["Delay"], f"{path}.Delay")
 
         else:
             raise ValueError(f"Unknown type '{rule_type}' at {path}")

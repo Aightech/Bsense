@@ -1,0 +1,41 @@
+{
+    "Type": "Randomized_sequence",
+    "Max_consecutive": 3,
+    "Delay": {
+        "Type": "Delay",
+        "Duration": 2,
+        "Deviation": 0.5
+    },
+    "Stimuli": [
+        {
+            "Repeat": 20,
+            "Label": "33%",
+            "Content": {
+                "Type": "Vib1",
+                "Amplitude": 0.33,
+                "Frequency": 170,
+                "Duration": 100
+            }
+        },
+        {
+            "Repeat": 20,
+            "Label": "66%",
+            "Content": {
+                "Type": "Vib1",
+                "Amplitude": 0.66,
+                "Frequency": 170,
+                "Duration": 100
+            }
+        },
+        {
+            "Repeat": 20,
+            "Label": "100%",
+            "Content": {
+                "Type": "Vib1",
+                "Amplitude": 1.0,
+                "Frequency": 170,
+                "Duration": 100
+            }
+        }
+    ]
+}

@@ -8,6 +8,69 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.experiment import Experiment
 
 
+class TestCaseInsensitivity(unittest.TestCase):
+    """Tests for case-insensitive protocol parsing."""
+
+    def setUp(self):
+        self.exp = Experiment()
+
+    def tearDown(self):
+        self.exp.close()
+
+    def test_lowercase_type(self):
+        """Lowercase 'type' should work."""
+        rules = {
+            "type": "sequence",
+            "repeat": 2,
+            "content": [{"type": "delay", "duration": 1.0}]
+        }
+        self.exp.from_dict(rules)
+        self.assertEqual(len(self.exp.sequence), 2)
+
+    def test_uppercase_type(self):
+        """Uppercase 'TYPE' should work."""
+        rules = {
+            "TYPE": "SEQUENCE",
+            "REPEAT": 2,
+            "CONTENT": [{"TYPE": "DELAY", "DURATION": 1.0}]
+        }
+        self.exp.from_dict(rules)
+        self.assertEqual(len(self.exp.sequence), 2)
+
+    def test_mixed_case(self):
+        """Mixed case should work."""
+        rules = {
+            "Type": "sequence",
+            "REPEAT": 2,
+            "content": [{"type": "Delay", "Duration": 1.0}]
+        }
+        self.exp.from_dict(rules)
+        self.assertEqual(len(self.exp.sequence), 2)
+
+    def test_lowercase_stimulus(self):
+        """Lowercase stimulus types should work."""
+        rules = {
+            "type": "stimulus",
+            "content": [{"type": "vib1", "amplitude": 0.5, "frequency": 170, "duration": 100}]
+        }
+        self.exp.from_dict(rules)
+        self.assertEqual(len(self.exp.sequence), 1)
+
+    def test_lowercase_randomized_sequence(self):
+        """Lowercase randomized_sequence should work."""
+        self.exp.log_cb = lambda x: None  # suppress log
+        rules = {
+            "type": "randomized_sequence",
+            "max_consecutive": 2,
+            "stimuli": [
+                {"repeat": 2, "content": {"type": "vib1", "amplitude": 0.33, "frequency": 170, "duration": 100}},
+                {"repeat": 2, "content": {"type": "vib1", "amplitude": 1.0, "frequency": 170, "duration": 100}}
+            ]
+        }
+        self.exp.from_dict(rules)
+        self.assertEqual(len(self.exp.sequence), 4)
+
+
 class TestExperimentSchemaValidation(unittest.TestCase):
     """Tests for JSON schema validation."""
 
@@ -197,6 +260,185 @@ class TestExperimentControl(unittest.TestCase):
         self.exp.current_idx = 2
         self.exp.pause()
         self.assertEqual(self.exp.current_idx, 2)
+
+
+class TestRandomizedSequenceValidation(unittest.TestCase):
+    """Tests for Randomized_sequence schema validation."""
+
+    def setUp(self):
+        self.exp = Experiment()
+        # Suppress log output during tests
+        self.exp.log_cb = lambda x: None
+
+    def tearDown(self):
+        self.exp.close()
+
+    def test_valid_randomized_sequence(self):
+        """Valid Randomized_sequence should load."""
+        rules = {
+            "Type": "Randomized_sequence",
+            "Max_consecutive": 2,
+            "Stimuli": [
+                {"Repeat": 3, "Label": "Low", "Content": {"Type": "Vib1", "Amplitude": 0.33, "Frequency": 170, "Duration": 100}},
+                {"Repeat": 3, "Label": "High", "Content": {"Type": "Vib1", "Amplitude": 1.0, "Frequency": 170, "Duration": 100}}
+            ]
+        }
+        self.exp.from_dict(rules)
+        # 6 stimuli total (3 + 3), no delays between
+        self.assertEqual(len(self.exp.sequence), 6)
+
+    def test_randomized_with_delay(self):
+        """Randomized_sequence with Delay should include delays."""
+        rules = {
+            "Type": "Randomized_sequence",
+            "Max_consecutive": 2,
+            "Delay": {"Type": "Delay", "Duration": 1.0},
+            "Stimuli": [
+                {"Repeat": 2, "Content": {"Type": "Vib1", "Amplitude": 0.5, "Frequency": 170, "Duration": 100}},
+                {"Repeat": 2, "Content": {"Type": "Vib1", "Amplitude": 1.0, "Frequency": 170, "Duration": 100}}
+            ]
+        }
+        self.exp.from_dict(rules)
+        # 4 stimuli + 3 delays between them = 7 events
+        self.assertEqual(len(self.exp.sequence), 7)
+
+    def test_randomized_missing_max_consecutive(self):
+        """Randomized_sequence without Max_consecutive should raise."""
+        rules = {
+            "Type": "Randomized_sequence",
+            "Stimuli": [
+                {"Repeat": 2, "Content": {"Type": "Vib1", "Amplitude": 0.5, "Frequency": 170, "Duration": 100}},
+                {"Repeat": 2, "Content": {"Type": "Vib1", "Amplitude": 1.0, "Frequency": 170, "Duration": 100}}
+            ]
+        }
+        with self.assertRaises(ValueError) as ctx:
+            self.exp.from_dict(rules)
+        self.assertIn("Max_consecutive", str(ctx.exception))
+
+    def test_randomized_missing_stimuli(self):
+        """Randomized_sequence without Stimuli should raise."""
+        rules = {
+            "Type": "Randomized_sequence",
+            "Max_consecutive": 2
+        }
+        with self.assertRaises(ValueError) as ctx:
+            self.exp.from_dict(rules)
+        self.assertIn("Stimuli", str(ctx.exception))
+
+    def test_randomized_only_one_stimulus_type(self):
+        """Randomized_sequence with only 1 stimulus type should raise."""
+        rules = {
+            "Type": "Randomized_sequence",
+            "Max_consecutive": 2,
+            "Stimuli": [
+                {"Repeat": 5, "Content": {"Type": "Vib1", "Amplitude": 0.5, "Frequency": 170, "Duration": 100}}
+            ]
+        }
+        with self.assertRaises(ValueError) as ctx:
+            self.exp.from_dict(rules)
+        self.assertIn("at least 2", str(ctx.exception))
+
+    def test_randomized_invalid_max_consecutive(self):
+        """Randomized_sequence with Max_consecutive < 1 should raise."""
+        rules = {
+            "Type": "Randomized_sequence",
+            "Max_consecutive": 0,
+            "Stimuli": [
+                {"Repeat": 2, "Content": {"Type": "Vib1", "Amplitude": 0.5, "Frequency": 170, "Duration": 100}},
+                {"Repeat": 2, "Content": {"Type": "Vib1", "Amplitude": 1.0, "Frequency": 170, "Duration": 100}}
+            ]
+        }
+        with self.assertRaises(ValueError) as ctx:
+            self.exp.from_dict(rules)
+        self.assertIn("positive integer", str(ctx.exception))
+
+    def test_randomized_stimulus_missing_repeat(self):
+        """Stimuli item without Repeat should raise."""
+        rules = {
+            "Type": "Randomized_sequence",
+            "Max_consecutive": 2,
+            "Stimuli": [
+                {"Content": {"Type": "Vib1", "Amplitude": 0.5, "Frequency": 170, "Duration": 100}},
+                {"Repeat": 2, "Content": {"Type": "Vib1", "Amplitude": 1.0, "Frequency": 170, "Duration": 100}}
+            ]
+        }
+        with self.assertRaises(ValueError) as ctx:
+            self.exp.from_dict(rules)
+        self.assertIn("Repeat", str(ctx.exception))
+
+    def test_randomized_stimulus_missing_content(self):
+        """Stimuli item without Content should raise."""
+        rules = {
+            "Type": "Randomized_sequence",
+            "Max_consecutive": 2,
+            "Stimuli": [
+                {"Repeat": 2},
+                {"Repeat": 2, "Content": {"Type": "Vib1", "Amplitude": 1.0, "Frequency": 170, "Duration": 100}}
+            ]
+        }
+        with self.assertRaises(ValueError) as ctx:
+            self.exp.from_dict(rules)
+        self.assertIn("Content", str(ctx.exception))
+
+
+class TestRandomizedSequenceConstraint(unittest.TestCase):
+    """Tests for max consecutive constraint enforcement."""
+
+    def setUp(self):
+        self.exp = Experiment()
+        self.exp.log_cb = lambda x: None
+
+    def tearDown(self):
+        self.exp.close()
+
+    def test_max_consecutive_enforced(self):
+        """Check that max consecutive constraint is satisfied."""
+        rules = {
+            "Type": "Randomized_sequence",
+            "Max_consecutive": 2,
+            "Stimuli": [
+                {"Repeat": 10, "Label": "A", "Content": {"Type": "Vib1", "Amplitude": 0.33, "Frequency": 170, "Duration": 100}},
+                {"Repeat": 10, "Label": "B", "Content": {"Type": "Vib1", "Amplitude": 0.66, "Frequency": 170, "Duration": 100}},
+                {"Repeat": 10, "Label": "C", "Content": {"Type": "Vib1", "Amplitude": 1.0, "Frequency": 170, "Duration": 100}}
+            ]
+        }
+        self.exp.from_dict(rules)
+
+        # Check that no label appears more than 2 times consecutively
+        consecutive = 1
+        prev_label = None
+        for event in self.exp.sequence:
+            label = event[1]  # the label is stored in position 1
+            if label == prev_label:
+                consecutive += 1
+                self.assertLessEqual(consecutive, 2, f"Found {consecutive} consecutive '{label}' events")
+            else:
+                consecutive = 1
+            prev_label = label
+
+    def test_total_count_preserved(self):
+        """Check that total stimulus count is preserved after randomization."""
+        rules = {
+            "Type": "Randomized_sequence",
+            "Max_consecutive": 3,
+            "Stimuli": [
+                {"Repeat": 20, "Label": "33%", "Content": {"Type": "Vib1", "Amplitude": 0.33, "Frequency": 170, "Duration": 100}},
+                {"Repeat": 20, "Label": "66%", "Content": {"Type": "Vib1", "Amplitude": 0.66, "Frequency": 170, "Duration": 100}},
+                {"Repeat": 20, "Label": "100%", "Content": {"Type": "Vib1", "Amplitude": 1.0, "Frequency": 170, "Duration": 100}}
+            ]
+        }
+        self.exp.from_dict(rules)
+        self.assertEqual(len(self.exp.sequence), 60)
+
+        # Count each label
+        counts = {}
+        for event in self.exp.sequence:
+            label = event[1]
+            counts[label] = counts.get(label, 0) + 1
+
+        self.assertEqual(counts.get("33%", 0), 20)
+        self.assertEqual(counts.get("66%", 0), 20)
+        self.assertEqual(counts.get("100%", 0), 20)
 
 
 if __name__ == '__main__':
