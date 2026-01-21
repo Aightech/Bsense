@@ -29,150 +29,207 @@ class Experiment:
         self.log_cb = self.__default_cb
         self.event_cb = self.__default_cb
         self.arduino = ArduinoCom()
-        self.sequence = []
-        self.current_idx = 0
-        self.running = False
+        self._lock = threading.Lock()  # protects shared state
+        self._sequence = []
+        self._current_idx = 0
+        self._running = False
         self.__active = True
-        self.thread = threading.Thread(target=self.__main_loop)
+        self.thread = threading.Thread(target=self.__main_loop, daemon=True)
         self.thread.start()
-    
+
+    @property
+    def sequence(self):
+        with self._lock:
+            return self._sequence
+
+    @sequence.setter
+    def sequence(self, value):
+        with self._lock:
+            self._sequence = value
+
+    @property
+    def current_idx(self):
+        with self._lock:
+            return self._current_idx
+
+    @current_idx.setter
+    def current_idx(self, value):
+        with self._lock:
+            self._current_idx = value
+
+    @property
+    def running(self):
+        with self._lock:
+            return self._running
+
+    @running.setter
+    def running(self, value):
+        with self._lock:
+            self._running = value
+
     def __default_cb(self, x):
         pass
-    
+
     def close(self):
         self.__active = False
         self.running = False
-        self.thread.join()
-        
+        self.thread.join(timeout=2.0)
+
     def connect_arduino(self, path):
         self.arduino.connect(path)
-    
+
     def add_cb_log(self, cb):
         self.log_cb = cb
-        
+
     def add_cb_event(self, cb):
         self.event_cb = cb
-        
+
     def start(self):
         self.running = True
-        
+
     def stop(self):
-        self.running = False
-        self.current_idx = 0
-        
+        with self._lock:
+            self._running = False
+            self._current_idx = 0
+
     def pause(self):
         self.running = False
-        
+
     def __main_loop(self):
         while self.__active:
-            if self.running and self.current_idx >= len(self.sequence):
+            with self._lock:
+                is_running = self._running
+                idx = self._current_idx
+                seq_len = len(self._sequence)
+                seq_copy = self._sequence[:]  # copy for safe iteration
+
+            if is_running and idx >= seq_len:
                 self.running = False
                 self.log_cb("End of experiment")
-            if self.running:
-                self.event_cb(self.current_idx)
-                # print("kernel time: "+str(time.time()), self.sequence[self.current_idx][1])
-                self.sequence[self.current_idx][0](self.sequence[self.current_idx][2])
-                #print kernel time
-                if self.running:#check if the experiment is still running and was not stopped during the execution of the event
-                    self.current_idx += 1
+            elif is_running:
+                self.event_cb(idx)
+                seq_copy[idx][0](seq_copy[idx][2])
+                # check if still running after execution (might have been stopped)
+                with self._lock:
+                    if self._running:
+                        self._current_idx += 1
             else:
                 time.sleep(0.1)
     
     def __read_type(self, rules):
-        if rules["Type"] == "Sequence":
+        if not isinstance(rules, dict) or "Type" not in rules:
+            raise ValueError("Invalid rule: missing 'Type' field")
+        rule_type = rules["Type"]
+        if rule_type == "Sequence":
             return self.__read_sequence(rules)
-        elif rules["Type"] == "stimulus":
+        elif rule_type == "stimulus":
             return self.__read_stimulus(rules)
-        elif rules["Type"] == "Delay":
+        elif rule_type == "Delay":
             return self.__read_delay(rules)
-        elif rules["Type"] == "Dropout_sequence":
+        elif rule_type == "Dropout_sequence":
             return self.__read_dropout_sequence(rules)
         else:
-            print("Error: unknown type " + rules["Type"])  
-            return []
+            raise ValueError(f"Unknown rule type: {rule_type}")
         
     def __read_sequence(self, rules):
+        if "Repeat" not in rules or "Content" not in rules:
+            raise ValueError("Sequence requires 'Repeat' and 'Content' fields")
+        repeat = rules["Repeat"]
+        content = rules["Content"]
+        if not isinstance(repeat, int) or repeat < 0:
+            raise ValueError("Sequence 'Repeat' must be a non-negative integer")
+        if not isinstance(content, list):
+            raise ValueError("Sequence 'Content' must be a list")
         arr = []
-        for k in range(rules["Repeat"]):
-            for i in range(len(rules["Content"])):
-                arr += self.__read_type(rules["Content"][i])
+        for k in range(repeat):
+            for item in content:
+                arr += self.__read_type(item)
         return arr
     
     def __read_stimulus(self, rules):
+        if "Content" not in rules or not isinstance(rules["Content"], list):
+            raise ValueError("stimulus requires 'Content' list")
         signal = 0
         arr = []
         for fb in rules["Content"]:
-            if fb["Type"] == "Buzzer":##Buzzer
-                val = fb["Amplitude"]
-                if "Deviation" in fb:
-                    val += fb["Deviation"]*(1-2*random.random())
-                val2 = 200
-                dt = 500
-                if "Tone" in fb:
-                    val2 = fb["Tone"]
-                    if "Deviation_tone" in fb:
-                        val2 += fb["Deviation_tone"]*(1-2*random.random())
-                if "Duration" in fb:
-                    dt = fb["Duration"]
-                    if "Deviation_duration" in fb:
-                        dt += fb["Deviation_duration"]*(1-2*random.random())
-                signal = ("b", val, val2, dt)
+            if not isinstance(fb, dict) or "Type" not in fb:
+                raise ValueError("stimulus content item missing 'Type'")
+            fb_type = fb["Type"]
 
-            elif fb["Type"] == "Vib1" or fb["Type"] == "Vib2":##Vib1 or Vib2
+            if fb_type == "Buzzer":
+                if "Amplitude" not in fb:
+                    raise ValueError("Buzzer requires 'Amplitude' field")
                 val = fb["Amplitude"]
+                val += fb.get("Deviation", 0) * (1 - 2 * random.random())
+                val2 = fb.get("Tone", 200)
+                val2 += fb.get("Deviation_tone", 0) * (1 - 2 * random.random())
+                dt = fb.get("Duration", 500)
+                dt += fb.get("Deviation_duration", 0) * (1 - 2 * random.random())
+                signal = ("b", val, int(val2), int(dt))
+
+            elif fb_type in ("Vib1", "Vib2"):
+                for field in ("Amplitude", "Frequency", "Duration"):
+                    if field not in fb:
+                        raise ValueError(f"{fb_type} requires '{field}' field")
+                val = fb["Amplitude"]
+                val += fb.get("Deviation", 0) * (1 - 2 * random.random())
                 freq = fb["Frequency"]
                 dt = fb["Duration"]
-                if "Deviation" in fb:
-                    val += fb["Deviation"]*(1-2*random.random())
-                source = "v" if fb["Type"] == "Vib1" else "w"
-                signal = (source, val, freq, dt)
+                source = "v" if fb_type == "Vib1" else "w"
+                signal = (source, val, int(freq), int(dt))
 
-            elif fb["Type"] == "BuzzVib1": ##BuzzVib1
+            elif fb_type == "BuzzVib1":
+                for field in ("Amplitude_vib1", "Frequency_vib1", "Duration_vib1", "Amplitude_buzz"):
+                    if field not in fb:
+                        raise ValueError(f"BuzzVib1 requires '{field}' field")
                 ampVib1 = fb["Amplitude_vib1"]
-                if "Deviation_amplitude_vib1" in fb:
-                    ampVib1 += fb["Deviation_amplitude_vib1"]*(1-2*random.random())
+                ampVib1 += fb.get("Deviation_amplitude_vib1", 0) * (1 - 2 * random.random())
                 freqVib1 = fb["Frequency_vib1"]
                 dtVib1 = fb["Duration_vib1"]
-                if "Deviation_duration_vib1" in fb:
-                    dtVib1 += fb["Deviation_duration_vib1"]*(1-2*random.random())
-                
+                dtVib1 += fb.get("Deviation_duration_vib1", 0) * (1 - 2 * random.random())
+
                 ampBuzz = fb["Amplitude_buzz"]
-                if "Deviation_amplitude_buzz" in fb:
-                    ampBuzz += fb["Deviation_amplitude_buzz"]*(1-2*random.random())
-                tone = 200
-                dt = 500
-                if "Tone_buzz" in fb:
-                    tone = fb["Tone_buzz"]
-                    if "Deviation_tone_buzz" in fb:
-                        tone += fb["Deviation_tone_buzz"]*(1-2*random.random())
-                if "Duration_buzz" in fb:
-                    dt = fb["Duration_buzz"]
-                    if "Deviation_duration_buzz" in fb:
-                        dt += fb["Deviation_duration_buzz"]*(1-2*random.random())
-                
-                signal = ("c", ampVib1, freqVib1, dtVib1, ampBuzz, tone, dt)
-                
-            arr.append([self.__stimulus, fb["Type"], signal])
+                ampBuzz += fb.get("Deviation_amplitude_buzz", 0) * (1 - 2 * random.random())
+                tone = fb.get("Tone_buzz", 200)
+                tone += fb.get("Deviation_tone_buzz", 0) * (1 - 2 * random.random())
+                dt = fb.get("Duration_buzz", 500)
+                dt += fb.get("Deviation_duration_buzz", 0) * (1 - 2 * random.random())
+
+                signal = ("c", ampVib1, int(freqVib1), int(dtVib1), ampBuzz, int(tone), int(dt))
+            else:
+                raise ValueError(f"Unknown stimulus type: {fb_type}")
+
+            arr.append([self.__stimulus, fb_type, signal])
         return arr
     
     def __read_delay(self, rules):
-        dt = rules["Duration"]+rules["Deviation"]*(1-2*random.random())
-        return [[self.__delay, "Delay", [0,dt]]]
+        if "Duration" not in rules:
+            raise ValueError("Delay requires 'Duration' field")
+        duration = rules["Duration"]
+        deviation = rules.get("Deviation", 0)
+        dt = duration + deviation * (1 - 2 * random.random())
+        dt = max(0, dt)  # prevent negative delays
+        return [[self.__delay, "Delay", [0, dt]]]
     
     def __read_dropout_sequence(self, rules):
-        if rules["Number_drop"] > rules["Repeat"]:
-            print("Error: Number_drop > Repeat")
-            return []
-        else:
-            arr = []
-            idx = random.sample(range(rules["Repeat"]), rules["Number_drop"])
-            for i in range(rules["Repeat"]):
-                if i in idx:
-                    for k in range(len(rules["Dropout_content"])):
-                        arr += self.__read_type(rules["Dropout_content"][k])
-                else:
-                    for k in range(len(rules["Content"])):
-                        arr += self.__read_type(rules["Content"][k])
+        for field in ("Number_drop", "Repeat", "Content", "Dropout_content"):
+            if field not in rules:
+                raise ValueError(f"Dropout_sequence requires '{field}' field")
+        num_drop = rules["Number_drop"]
+        repeat = rules["Repeat"]
+        if num_drop > repeat:
+            raise ValueError(f"Number_drop ({num_drop}) cannot exceed Repeat ({repeat})")
+        if not isinstance(rules["Content"], list) or not isinstance(rules["Dropout_content"], list):
+            raise ValueError("Dropout_sequence 'Content' and 'Dropout_content' must be lists")
+        arr = []
+        idx = random.sample(range(repeat), num_drop)
+        for i in range(repeat):
+            if i in idx:
+                for item in rules["Dropout_content"]:
+                    arr += self.__read_type(item)
+            else:
+                for item in rules["Content"]:
+                    arr += self.__read_type(item)
         return arr
     
     def __stimulus(self, signal):
@@ -193,8 +250,12 @@ class Experiment:
         try:
             with open(path, "r") as f:
                 self.from_dict(json.load(f))
-        except:
-            raise Exception("Error: could not open file " + path)
+        except FileNotFoundError:
+            raise Exception(f"Error: file not found: {path}")
+        except json.JSONDecodeError as e:
+            raise Exception(f"Error: invalid JSON in {path}: {e}")
+        except ValueError as e:
+            raise Exception(f"Error: invalid experiment format in {path}: {e}")
         
     def from_dict(self, rules):
         self.sequence = self.__read_type(rules)

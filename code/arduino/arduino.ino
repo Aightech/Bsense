@@ -20,9 +20,11 @@
 #define STARTING_CHAR 0xaa // 170 ascii code: ª
 
 uint8_t ampVib1 = 0;
+uint16_t freqVib1 = 0;
 uint8_t ampVib2 = 0;
+uint16_t freqVib2 = 0;
 uint8_t ampBuzz = 0;
-uint8_t toneBuzz = 0;
+uint16_t toneBuzz = 0;
 uint16_t timeBuzz = 0;
 
 unsigned long micros_time = 0;
@@ -78,10 +80,17 @@ void vib2(int amp) // set the vibration2 amplitude and direction
   vib2_state = amp;
 }
 
-void buzzer(int amp, int tone) // set the buzzer amplitude and tone
+void buzzer(int amp, uint16_t freq) // set the buzzer amplitude and frequency
 {
   analogWrite(PIN_BUZZER_AMP, amp);
-  analogWrite(PIN_BUZZER_TONE, tone);
+  if (freq > 0 && amp > 0)
+  {
+    tone(PIN_BUZZER_TONE, freq);
+  }
+  else
+  {
+    noTone(PIN_BUZZER_TONE);
+  }
   buzz_state = amp;
 }
 
@@ -126,6 +135,11 @@ void loop()
     {
       source = buff[1];                // read what type of stimulus is {v: vibration1, w: vibration2, b: buzzer}
       len = buff[2];                   // read the length of the message
+      if (len > sizeof(buff))          // bounds check to prevent buffer overflow
+      {
+        while (Serial.available()) Serial.read(); // flush invalid data
+        return;
+      }
       Serial.readBytes((char *)&buff, len); // read the message
       micros_time = micros();          // get the current time
       trigger_pulse(true);             // trigger a pulse on the trigger pin
@@ -134,28 +148,32 @@ void loop()
       {
       case 'v': // trigger a pulse for the vibration1
         ampVib1 = buff[0]; // read the amplitude of the vibration1
+        freqVib1 = *((uint16_t *)&buff[1]); // read the frequency (2 bytes)
         vib1(ampVib1);
         delay_ms_vib1 = micros_time + 100; //*dt; //the vibration1 pulse is 100us
         break;
       case 'w': // trigger a pulse for the vibration2
         ampVib2 = buff[0]; // read the amplitude of the vibration2
+        freqVib2 = *((uint16_t *)&buff[1]); // read the frequency (2 bytes)
         vib2(ampVib2);
         delay_ms_vib2 = micros_time + 100; //*dt; //the vibration2 pulse is 100us
         break;
       case 'b': // trigger a pulse for the buzzer
         ampBuzz = buff[0]; // read the amplitude of the buzzer
-        toneBuzz = buff[1]; // read the tone of the buzzer
-        timeBuzz = *((uint16_t *)&buff[2]); // read the duration of the buzzer
+        toneBuzz = *((uint16_t *)&buff[1]); // read the tone of the buzzer (2 bytes)
+        timeBuzz = *((uint16_t *)&buff[3]); // read the duration of the buzzer
         buzzer(ampBuzz, toneBuzz);
         delay_ms_buzz = micros_time + 100 * timeBuzz; // the buzzer pulse is 100us*duration
         break;
-      case 'c':// combination of Buzzer and Vibration2
-        ampBuzz = buff[0]; // read the amplitude of the buzzer
-        toneBuzz = buff[1]; // read the tone of the buzzer
-        timeBuzz = *((uint16_t *)&buff[2]); // read the duration of the buzzer
-        ampVib2 = buff[4]; // read the amplitude of the vibration2
-        vib2(ampVib2);
-        delay_ms_vib2 = micros_time + 100; //*dt; //the vibration2 pulse is 100us
+      case 'c':// combination of Buzzer and Vibration1
+        ampVib1 = buff[0]; // read the amplitude of the vibration1
+        freqVib1 = *((uint16_t *)&buff[1]); // read the frequency (2 bytes)
+        // duration at buff[3-4]
+        ampBuzz = buff[5]; // read the amplitude of the buzzer
+        toneBuzz = *((uint16_t *)&buff[6]); // read the tone of the buzzer (2 bytes)
+        timeBuzz = *((uint16_t *)&buff[8]); // read the duration of the buzzer
+        vib1(ampVib1);
+        delay_ms_vib1 = micros_time + 100; //*dt; //the vibration1 pulse is 100us
         buzzer(ampBuzz, toneBuzz);
         delay_ms_buzz = micros_time + 100 * timeBuzz; // the buzzer pulse is 100us*duration
         break;
