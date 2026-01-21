@@ -1,2 +1,10 @@
 app/web/
 app/web/*
+
+# Build artifacts
+**/build/
+__pycache__/
+*.pyc
+
+# Log files
+*.log
