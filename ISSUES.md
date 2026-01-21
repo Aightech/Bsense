@@ -125,17 +125,21 @@ This document tracks bugs, limitations, and potential improvements in the Bsense
 
 ## Design Limitations
 
-### 22. No Graceful Shutdown
-Stimulus continues for full duration after stop is called. Worker thread may be blocked in `time.sleep()`.
+### ~~22. No Graceful Shutdown~~ (FIXED)
+~~Stimulus continues for full duration after stop is called. Worker thread may be blocked in `time.sleep()`.~~
+**Fix applied:** Replaced `time.sleep()` with `threading.Event.wait()` for interruptible delays. Stop/pause immediately interrupts any ongoing delay.
 
-### 23. No Connection Monitoring
-After initial connection, disconnected cable causes silent failures with no user feedback.
+### ~~23. No Connection Monitoring~~ (FIXED)
+~~After initial connection, disconnected cable causes silent failures with no user feedback.~~
+**Fix applied:** Added `is_connected()` and `check_connection()` methods. UI monitors connection every 1 second, shows error on disconnect, and stops experiment automatically.
 
-### 24. No JSON Schema Validation
-Custom experiment files not validated on load - errors only appear during playback.
+### ~~24. No JSON Schema Validation~~ (FIXED)
+~~Custom experiment files not validated on load - errors only appear during playback.~~
+**Fix applied:** Added `__validate_schema()` and `__validate_stimulus_item()` methods that recursively validate JSON structure on load. Errors include path information (e.g., "root.Content[2].Duration").
 
-### 25. Empty Test Suite
-Test files in `app/python/tests/` are stubs with no actual tests.
+### ~~25. Empty Test Suite~~ (FIXED)
+~~Test files in `app/python/tests/` are stubs with no actual tests.~~
+**Fix applied:** Added 33 unit tests covering schema validation, signal encoding, connection state, and experiment control. Run with `python -m unittest discover tests/`.
 
 ---
 

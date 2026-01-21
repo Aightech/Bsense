@@ -33,6 +33,7 @@ class Experiment:
         self._sequence = []
         self._current_idx = 0
         self._running = False
+        self._stop_event = threading.Event()  # for fast interrupt of delays
         self.__active = True
         self.thread = threading.Thread(target=self.__main_loop, daemon=True)
         self.thread.start()
@@ -73,7 +74,9 @@ class Experiment:
     def close(self):
         self.__active = False
         self.running = False
+        self._stop_event.set()  # interrupt any ongoing delay
         self.thread.join(timeout=2.0)
+        self.arduino.disconnect()  # clean up serial connection
 
     def connect_arduino(self, path):
         self.arduino.connect(path)
@@ -85,15 +88,18 @@ class Experiment:
         self.event_cb = cb
 
     def start(self):
+        self._stop_event.clear()  # reset stop event
         self.running = True
 
     def stop(self):
         with self._lock:
             self._running = False
             self._current_idx = 0
+        self._stop_event.set()  # interrupt any ongoing delay immediately
 
     def pause(self):
         self.running = False
+        self._stop_event.set()  # interrupt any ongoing delay
 
     def __main_loop(self):
         while self.__active:
@@ -234,16 +240,18 @@ class Experiment:
     
     def __stimulus(self, signal):
         # Stimulus logic
-        self.arduino.send_signal(signal)
-        self.log_cb("stimulus: " + str(signal))
+        try:
+            self.arduino.send_signal(signal)
+            self.log_cb("stimulus: " + str(signal))
+        except Exception as e:
+            self.log_cb(f"stimulus error: {e}")
+            self.stop()  # Stop experiment on communication error
     
     def __delay(self, value):
-        value = value[1]
-        self.log_cb("delay: " + str(value))
-        #wait for the delay while checking if the experiment is still running
-        t0 = time.time()
-        while time.time() - t0 < value and self.running:
-            time.sleep(0.001)
+        delay_seconds = value[1]
+        self.log_cb(f"delay: {delay_seconds}")
+        # Use event.wait() for interruptible delay - returns immediately if stop_event is set
+        self._stop_event.wait(timeout=delay_seconds)
     
     def from_json(self, path):
         # Load experiment from json file
@@ -258,8 +266,89 @@ class Experiment:
             raise Exception(f"Error: invalid experiment format in {path}: {e}")
         
     def from_dict(self, rules):
+        # Validate schema first (catches errors before playback)
+        self.__validate_schema(rules)
         self.sequence = self.__read_type(rules)
         self.current_idx = 0
+
+    def __validate_schema(self, rules, path="root"):
+        """Validate JSON schema recursively. Raises ValueError with path on error."""
+        if not isinstance(rules, dict):
+            raise ValueError(f"Expected object at {path}, got {type(rules).__name__}")
+        if "Type" not in rules:
+            raise ValueError(f"Missing 'Type' field at {path}")
+
+        rule_type = rules["Type"]
+
+        if rule_type == "Sequence":
+            if "Repeat" not in rules:
+                raise ValueError(f"Sequence missing 'Repeat' at {path}")
+            if not isinstance(rules["Repeat"], int) or rules["Repeat"] < 0:
+                raise ValueError(f"Sequence 'Repeat' must be non-negative integer at {path}")
+            if "Content" not in rules:
+                raise ValueError(f"Sequence missing 'Content' at {path}")
+            if not isinstance(rules["Content"], list):
+                raise ValueError(f"Sequence 'Content' must be a list at {path}")
+            for i, item in enumerate(rules["Content"]):
+                self.__validate_schema(item, f"{path}.Content[{i}]")
+
+        elif rule_type == "stimulus":
+            if "Content" not in rules:
+                raise ValueError(f"stimulus missing 'Content' at {path}")
+            if not isinstance(rules["Content"], list):
+                raise ValueError(f"stimulus 'Content' must be a list at {path}")
+            for i, fb in enumerate(rules["Content"]):
+                self.__validate_stimulus_item(fb, f"{path}.Content[{i}]")
+
+        elif rule_type == "Delay":
+            if "Duration" not in rules:
+                raise ValueError(f"Delay missing 'Duration' at {path}")
+            if not isinstance(rules["Duration"], (int, float)):
+                raise ValueError(f"Delay 'Duration' must be a number at {path}")
+
+        elif rule_type == "Dropout_sequence":
+            for field in ("Number_drop", "Repeat", "Content", "Dropout_content"):
+                if field not in rules:
+                    raise ValueError(f"Dropout_sequence missing '{field}' at {path}")
+            if rules["Number_drop"] > rules["Repeat"]:
+                raise ValueError(f"Number_drop cannot exceed Repeat at {path}")
+            if not isinstance(rules["Content"], list):
+                raise ValueError(f"Dropout_sequence 'Content' must be a list at {path}")
+            if not isinstance(rules["Dropout_content"], list):
+                raise ValueError(f"Dropout_sequence 'Dropout_content' must be a list at {path}")
+            for i, item in enumerate(rules["Content"]):
+                self.__validate_schema(item, f"{path}.Content[{i}]")
+            for i, item in enumerate(rules["Dropout_content"]):
+                self.__validate_schema(item, f"{path}.Dropout_content[{i}]")
+
+        else:
+            raise ValueError(f"Unknown type '{rule_type}' at {path}")
+
+    def __validate_stimulus_item(self, fb, path):
+        """Validate a single stimulus content item."""
+        if not isinstance(fb, dict):
+            raise ValueError(f"Expected object at {path}, got {type(fb).__name__}")
+        if "Type" not in fb:
+            raise ValueError(f"stimulus item missing 'Type' at {path}")
+
+        fb_type = fb["Type"]
+
+        if fb_type == "Buzzer":
+            if "Amplitude" not in fb:
+                raise ValueError(f"Buzzer missing 'Amplitude' at {path}")
+
+        elif fb_type in ("Vib1", "Vib2"):
+            for field in ("Amplitude", "Frequency", "Duration"):
+                if field not in fb:
+                    raise ValueError(f"{fb_type} missing '{field}' at {path}")
+
+        elif fb_type == "BuzzVib1":
+            for field in ("Amplitude_vib1", "Frequency_vib1", "Duration_vib1", "Amplitude_buzz"):
+                if field not in fb:
+                    raise ValueError(f"BuzzVib1 missing '{field}' at {path}")
+
+        else:
+            raise ValueError(f"Unknown stimulus type '{fb_type}' at {path}")
 
     def run(self):
         # Experiment logic

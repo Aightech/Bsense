@@ -43,6 +43,7 @@ class BsenseGUI(ctk.CTk):
         self.exp = Experiment()
         self.exp.log_cb = self.add_log
         self.exp.event_cb = self.on_new_event
+        self._connection_check_id = None  # for periodic connection monitoring
 
         self.setup_ui()
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -92,10 +93,53 @@ class BsenseGUI(ctk.CTk):
     #when the window is closed
     def on_closing(self):
         logger.info("Closing application")
+        self._stop_connection_monitor()
         self.exp.close()
         if self.file_log_open:
             self.file_log.close()
         self.destroy()
+
+    def _start_connection_monitor(self):
+        """Start periodic connection monitoring."""
+        self._check_connection()
+
+    def _stop_connection_monitor(self):
+        """Stop periodic connection monitoring."""
+        if self._connection_check_id is not None:
+            self.after_cancel(self._connection_check_id)
+            self._connection_check_id = None
+
+    def _check_connection(self):
+        """Check if Arduino is still connected and update UI if disconnected."""
+        if not self.exp.arduino.is_connected():
+            self._handle_disconnection()
+        else:
+            # Schedule next check in 1 second
+            self._connection_check_id = self.after(1000, self._check_connection)
+
+    def _handle_disconnection(self):
+        """Handle Arduino disconnection - stop experiment and update UI."""
+        self._connection_check_id = None
+        was_running = self.exp.running
+
+        # Stop experiment if running
+        if was_running:
+            self.exp.stop()
+
+        # Update UI to show disconnection
+        self.add_log("ERROR: Arduino disconnected!")
+        self.connection_entry.configure(state="normal", fg_color="red")
+        self.connection_button.configure(state="normal", fg_color=['#3a7ebf', '#1f538d'])
+
+        # Reset experiment controls
+        self.command_GO_button.configure(state="disabled", fg_color="grey")
+        self.command_PAUSE_button.configure(state="disabled", fg_color="grey")
+        self.command_STOP_button.configure(state="disabled", fg_color="grey")
+        self.exp_combo.configure(state="disabled", fg_color="grey")
+
+        # Keep subject validated if already validated
+        if self.subject_entry.cget("state") == "disabled" and self.subject_entry.cget("fg_color") == "green":
+            self.validation_button.configure(state="disabled", fg_color="grey")
 
     def create_experiment_treeview(self):
         # Treeview listing all the events
@@ -367,6 +411,8 @@ class BsenseGUI(ctk.CTk):
             self.add_log("Connected to device: " + self.connection_entry.get())
             self.subject_entry.configure(state="normal", fg_color="white")
             self.validation_button.configure(state="normal", fg_color=['#3a7ebf', '#1f538d'])
+            # Start connection monitoring
+            self._start_connection_monitor()
         except Exception as e:
             self.add_log("Error: " + str(e))
             #set the entry background to red

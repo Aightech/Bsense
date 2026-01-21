@@ -50,7 +50,19 @@ class ArduinoCom:
 
     def is_connected(self):
         """Check if serial port is open and connected."""
-        return self.arduino is not None and self.arduino.is_open
+        if self.arduino is None:
+            return False
+        try:
+            # Check if port is still open and readable
+            return self.arduino.is_open and self.arduino.in_waiting >= 0
+        except (serial.SerialException, OSError):
+            return False
+
+    def check_connection(self):
+        """Verify connection is still active. Raises exception if disconnected."""
+        if not self.is_connected():
+            self.arduino = None  # Clean up stale reference
+            raise serial.SerialException("Arduino disconnected")
 
     def send_signal(self, signal):
         """Send a signal to the Arduino
@@ -105,8 +117,13 @@ class ArduinoCom:
         cmd_hex = " ".join("{:02x}".format(c) for c in cmd)
 
         if self.arduino is not None:
-            self.arduino.write(cmd)
-            logger.debug(f"[SENT] cmd [{signal[0]}]: {cmd_hex} (len: {len(cmd)})")
+            try:
+                self.check_connection()
+                self.arduino.write(cmd)
+                logger.debug(f"[SENT] cmd [{signal[0]}]: {cmd_hex} (len: {len(cmd)})")
+            except serial.SerialException as e:
+                logger.error(f"[DISCONNECTED] cmd [{signal[0]}]: {cmd_hex} - {e}")
+                raise
         else:
             logger.warning(f"[UNSENT] cmd [{signal[0]}]: {cmd_hex} (len: {len(cmd)})")
             
