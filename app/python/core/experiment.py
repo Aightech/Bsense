@@ -3,6 +3,7 @@ import json
 import random
 import time
 import threading
+import serial
 from core.arduino_communication import ArduinoCom
 
 
@@ -73,6 +74,7 @@ class Experiment:
         # Experiment initialization
         self.log_cb = self.__default_cb
         self.event_cb = self.__default_cb
+        self.disconnect_cb = self.__default_cb  # called on connection error
         self.arduino = ArduinoCom()
         self._lock = threading.Lock()  # protects shared state
         self._sequence = []
@@ -459,9 +461,13 @@ class Experiment:
         try:
             self.arduino.send_signal(signal)
             self.log_cb("stimulus: " + str(signal))
+        except serial.SerialException as e:
+            self.log_cb(f"stimulus error (disconnected): {e}")
+            self.stop()
+            self.disconnect_cb()  # Notify UI of disconnection
         except Exception as e:
             self.log_cb(f"stimulus error: {e}")
-            self.stop()  # Stop experiment on communication error
+            self.stop()
     
     def __delay(self, value):
         delay_seconds = value[1]
