@@ -188,6 +188,37 @@ Located in `code/teensyScript/`. Flash using Arduino IDE or PlatformIO with Teen
 
 **Note:** LRA actuator is rated 1.8V. With 3.3V Teensy output, saturation occurs at ~60% duty cycle. Effective amplitude range is 0-77 (of 0-255).
 
+## Technical Documentation
+
+### Signal Generation
+
+See [reports/siggen.md](reports/siggen.md) for details on PWM-based LRA excitation:
+- Amplitude control via PWM duty cycle (0-50% maps to 0-100% user range)
+- Frequency-dependent response due to LRA mechanical resonance (~230 Hz)
+- Duration control in milliseconds
+
+![Signal generation](docs/siggen.png)
+
+### LRA Simulation
+
+The `simulation/` folder contains Python tools for modeling LRA response:
+
+```bash
+cd simulation
+python cmd.py  # Interactive PWM → LRA resonator plot
+```
+
+Requires: `numpy`, `matplotlib`, optionally `scipy`
+
+![LRA band-pass response](docs/lrabp.png)
+
+### Research Reports
+
+| Report | Description |
+|--------|-------------|
+| [R05jan25.md](reports/R05jan25.md) | EEG noise testing, amplitude mapping, silicone moulding |
+| [siggen.md](reports/siggen.md) | Signal generation and parameter encoding |
+
 ## Running Tests
 
 ```bash
