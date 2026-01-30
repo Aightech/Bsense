@@ -1,0 +1,25 @@
+{
+    "Type": "Sequence",
+    "Repeat": 10,
+    "Content": [
+        {
+            "Type": "stimulus",
+            "Content": [
+                {
+                    "Type": "BuzzVib1",
+                    "Amplitude_vib1": 1,
+                    "Frequency_vib1": 170,
+                    "Duration_vib1": 100,
+                    "Amplitude_buzz": 0.5,
+                    "Tone_buzz": 1000,
+                    "Duration_buzz": 150
+                }
+            ]
+        },
+        {
+            "Type": "Delay",
+            "Duration": 2,
+            "Deviation": 0.5
+        }
+    ]
+}

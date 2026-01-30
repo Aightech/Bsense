@@ -1,0 +1,30 @@
+{
+    "Type": "Dropout_sequence",
+    "Repeat": 10,
+    "Number_drop": 3,
+    "Content": [
+        {
+            "Type": "stimulus",
+            "Content": [
+                {
+                    "Type": "Vib1",
+                    "Amplitude": 0.5,
+                    "Frequency": 170,
+                    "Duration": 100
+                }
+            ]
+        },
+        {
+            "Type": "Delay",
+            "Duration": 2,
+            "Deviation": 0.5
+        }
+    ],
+    "Dropout_content": [
+        {
+            "Type": "Delay",
+            "Duration": 2,
+            "Deviation": 0.5
+        }
+    ]
+}

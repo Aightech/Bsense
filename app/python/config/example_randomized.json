@@ -9,7 +9,7 @@
     "Stimuli": [
         {
             "Repeat": 20,
-            "Label": "33%",
+            "Label": "Low",
             "Content": {
                 "Type": "Vib1",
                 "Amplitude": 0.33,
@@ -19,7 +19,7 @@
         },
         {
             "Repeat": 20,
-            "Label": "66%",
+            "Label": "Medium",
             "Content": {
                 "Type": "Vib1",
                 "Amplitude": 0.66,
@@ -29,7 +29,7 @@
         },
         {
             "Repeat": 20,
-            "Label": "100%",
+            "Label": "High",
             "Content": {
                 "Type": "Vib1",
                 "Amplitude": 1.0,

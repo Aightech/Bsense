@@ -9,15 +9,14 @@
                     "Type": "Vib1",
                     "Amplitude": 1,
                     "Frequency": 170,
-                    "Duration": 30,
-                    "Deviation": 0
-                }               
+                    "Duration": 100
+                }
             ]
         },
         {
             "Type": "Delay",
-            "Duration": 10,
-            "Deviation": 2
+            "Duration": 2,
+            "Deviation": 0.5
         }
     ]
 }

@@ -7,17 +7,16 @@
             "Content": [
                 {
                     "Type": "Buzzer",
-                    "Amplitude": 1,
-                    "Tone": 200,
-                    "Duration": 30,
-                    "Deviation": 0
+                    "Amplitude": 0.5,
+                    "Tone": 1000,
+                    "Duration": 200
                 }
             ]
         },
         {
             "Type": "Delay",
-            "Duration": 10,
-            "Deviation": 2
+            "Duration": 2,
+            "Deviation": 0.5
         }
     ]
 }
