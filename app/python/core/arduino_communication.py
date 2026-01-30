@@ -49,12 +49,15 @@ class ArduinoCom:
             self.arduino = None
 
     def is_connected(self):
-        """Check if serial port is open and connected."""
+        """Check if serial port is open.
+
+        Note: Only checks is_open flag. Avoid accessing in_waiting as it
+        can interfere with some USB serial devices (e.g., Teensy).
+        """
         if self.arduino is None:
             return False
         try:
-            # Check if port is still open and readable
-            return self.arduino.is_open and self.arduino.in_waiting >= 0
+            return self.arduino.is_open
         except (serial.SerialException, OSError):
             return False
 
