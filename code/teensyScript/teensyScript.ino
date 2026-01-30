@@ -1,11 +1,33 @@
+/*
+ * Bsense Teensy Firmware
+ *
+ * Controls LRA vibration motor and buzzer for haptic/audio stimuli.
+ * Communicates via serial (115200 baud) with binary protocol.
+ *
+ * Amplitude Scaling Notes:
+ * - PWM resolution: 9-bit (0-511)
+ * - Teensy output: 3.3V
+ * - LRA actuator rated: 1.8V
+ * - Saturation occurs at ~60% duty cycle (3.3V * 0.6 = 1.98V)
+ * - Amplitude 0-255 is scaled by *4 to use full PWM range
+ * - Effective usable amplitude: 0-77 (values above saturate the actuator)
+ *
+ * Buzzer Implementation:
+ * - Uses hardware PWM via analogWriteFrequency() for accurate tone generation
+ * - Works well at high frequencies (e.g., 2000Hz) unlike manual toggling
+ * - PIN_BUZZER_TONE: PWM frequency sets the tone (50% duty cycle)
+ * - PIN_BUZZER_AMP: PWM duty cycle controls volume
+ */
+
 #define TIMER_INTERVAL_US 1000
 
 #define PIN_TRIG 2
 #define PIN_VIB1_PWM 0
 #define PIN_VIB1_PH 1
 
-#define PIN_VIB2_PWM 2
-#define PIN_VIB2_PH 3
+// VIB2 currently unused - pins commented out to avoid conflict with PIN_TRIG
+// #define PIN_VIB2_PWM 2
+// #define PIN_VIB2_PH 3
 
 #define PIN_BUZZER_TONE 4
 #define PIN_BUZZER_AMP 3
@@ -16,22 +38,21 @@ IntervalTimer myTimer;
 
 uint8_t ampVib1 = 0;
 uint32_t periodVib1 = 0;
-uint8_t ampVib2 = 0;
-uint32_t periodVib2 = 0;
+// uint8_t ampVib2 = 0;      // VIB2 unused
+// uint32_t periodVib2 = 0;  // VIB2 unused
 uint8_t ampBuzz = 0;
-uint32_t periodBuzz = 0;
-uint16_t timeBuzz = 0;
+uint16_t freqBuzz = 0;  // Buzzer frequency for analogWriteFrequency()
 
 unsigned long micros_time = 0;
 unsigned long start_us_vib1 = 0;
 unsigned long end_us_vib1 = 0;
-unsigned long start_us_vib2 = 0;
-unsigned long end_us_vib2 = 0;
+// unsigned long start_us_vib2 = 0;  // VIB2 unused
+// unsigned long end_us_vib2 = 0;    // VIB2 unused
 unsigned long start_us_buzz = 0;
 unsigned long end_us_buzz = 0;
 unsigned long delay_trig = 0;
 bool vib1_state = false;
-bool vib2_state = false;
+// bool vib2_state = false;  // VIB2 unused
 bool buzz_state = false;
 
 uint8_t source;
@@ -61,27 +82,18 @@ void TimerHandler()
         }
     }
 
-    if (vib2_state && t_us >= end_us_vib2)
-    { // if the duration is over: turn it off
-        vib2(false);
-        vib2_state = false;
-    }
+    // VIB2 unused
+    // if (vib2_state && t_us >= end_us_vib2)
+    // {
+    //     vib2(false);
+    //     vib2_state = false;
+    // }
 
-    if (buzz_state)
+    if (buzz_state && t_us >= end_us_buzz)
     {
-        if (t_us >= end_us_buzz)
-        { // if the duration is over: turn it off
-            buzzer(0, LOW);
-            buzz_state = false;
-        }
-        else if (periodBuzz > 0)
-        {
-            // Calculate direction based on elapsed time from start
-            unsigned long elapsed = t_us - start_us_buzz;
-            unsigned long half_period = periodBuzz / 2;
-            bool dir = (half_period > 0) ? ((elapsed / half_period) % 2) : LOW;
-            buzzer(ampBuzz, dir);
-        }
+        // Duration over - turn off buzzer
+        buzzer_stop();
+        buzz_state = false;
     }
 
     if (t_us >= delay_trig)
@@ -92,22 +104,37 @@ void TimerHandler()
 
 void vib1(int amp, bool dir) // switch the vibration1 on or off
 {
-    analogWrite(PIN_VIB1_PWM, amp * 4);
+    // Amplitude scaled by 4 for 9-bit PWM (0-511)
+    // Note: LRA saturates at ~60% duty, so effective range is amp 0-77
+    analogWrite(PIN_VIB1_PWM, amp * 2);
     digitalWrite(PIN_VIB1_PH, dir);
 }
 
-void vib2(int amp) // set the vibration2 amplitude and direction
+// VIB2 unused
+// void vib2(int amp)
+// {
+//     analogWrite(PIN_VIB2_PWM, amp * 4);
+//     digitalWrite(PIN_VIB2_PH, false);
+//     vib2_state = (amp > 0);
+// }
+
+void buzzer_start(int amp, uint16_t freq) // start buzzer with amplitude and frequency
 {
-    analogWrite(PIN_VIB2_PWM, amp);
-    digitalWrite(PIN_VIB2_PH, false);
-    vib2_state = amp;
+    // Use hardware PWM for tone generation (works well at high frequencies like 2000Hz)
+    // Set the PWM frequency for the tone pin
+    if (freq > 0) {
+        analogWriteFrequency(PIN_BUZZER_TONE, freq);
+        analogWrite(PIN_BUZZER_TONE, 256);  // 50% duty cycle (9-bit: 512/2 = 256)
+    }
+    // Amplitude controls volume via separate pin
+    // Scaled by 4 for 9-bit PWM (0-511)
+    analogWrite(PIN_BUZZER_AMP, amp * 2);
 }
 
-void buzzer(int amp, bool dir) // set the buzzer amplitude and tone
+void buzzer_stop() // stop the buzzer
 {
-    analogWrite(PIN_BUZZER_AMP, amp*4);
-    digitalWrite(PIN_BUZZER_TONE, dir);
-    buzz_state = amp;
+    analogWrite(PIN_BUZZER_TONE, 0);  // Stop tone
+    analogWrite(PIN_BUZZER_AMP, 0);   // Stop amplitude
 }
 
 void trigger_pulse(bool state) // trigger a pulse on the trigger pin
@@ -125,14 +152,18 @@ void setup()
     analogWriteFrequency(PIN_VIB1_PWM, 46875);
     pinMode(PIN_VIB1_PH, OUTPUT);
 
-    pinMode(PIN_VIB2_PWM, OUTPUT);
-    analogWriteFrequency(PIN_VIB2_PWM, 46875);
-    pinMode(PIN_VIB2_PH, OUTPUT);   
+    // VIB2 unused
+    // pinMode(PIN_VIB2_PWM, OUTPUT);
+    // analogWriteFrequency(PIN_VIB2_PWM, 46875);
+    // pinMode(PIN_VIB2_PH, OUTPUT);
 
     pinMode(PIN_BUZZER_TONE, OUTPUT);
     pinMode(PIN_BUZZER_AMP, OUTPUT);
+    analogWriteFrequency(PIN_BUZZER_AMP, 292968);
     pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(PIN_BUZZER_AMP, HIGH);
+    // Buzzer starts off
+    analogWrite(PIN_BUZZER_TONE, 0);
+    analogWrite(PIN_BUZZER_AMP, 0);
 
     // Initialize Serial communication and button pin
     Serial.begin(115200);
@@ -168,7 +199,7 @@ void loop()
 
             // Validate message length for each command type
             uint8_t expected_len = 0;
-            if (source == 'v' || source == 'w' || source == 'b') expected_len = 5;
+            if (source == 'v' || source == 'b') expected_len = 5;  // 'w' (vib2) unused
             else if (source == 'c') expected_len = 10;
             if (expected_len > 0 && len < expected_len) {
                 return; // Invalid message length
@@ -189,39 +220,42 @@ void loop()
                 vib1_state = true;
                 break;
             }
-            case 'w':                                       // trigger a pulse for the vibration2
-            {
-                ampVib2 = buff[0];                          // read the amplitude of the vibration2
-                uint16_t freqVib2 = *((uint16_t *)&buff[1]); // read the frequency (2 bytes)
-                periodVib2 = (freqVib2 > 0) ? (1000000 / freqVib2) : 0; // calculate the period in microseconds
-                start_us_vib2 = micros_time;
-                end_us_vib2 = micros_time + *((uint16_t *)&buff[3]) * ((unsigned long)1000);
-                vib2_state = true;
-                break;
-            }
+            // VIB2 unused
+            // case 'w':
+            // {
+            //     ampVib2 = buff[0];
+            //     uint16_t freqVib2 = *((uint16_t *)&buff[1]);
+            //     periodVib2 = (freqVib2 > 0) ? (1000000 / freqVib2) : 0;
+            //     start_us_vib2 = micros_time;
+            //     end_us_vib2 = micros_time + *((uint16_t *)&buff[3]) * ((unsigned long)1000);
+            //     vib2_state = true;
+            //     break;
+            // }
             case 'b':                                       // trigger a pulse for the buzzer
             {
                 ampBuzz = buff[0];                          // read the amplitude of the buzzer
-                uint16_t freqBuzz = *((uint16_t *)&buff[1]); // read the frequency (2 bytes)
-                periodBuzz = (freqBuzz > 0) ? (1000000 / freqBuzz) : 0; // calculate the period in microseconds
+                freqBuzz = *((uint16_t *)&buff[1]);         // read the frequency (2 bytes)
                 start_us_buzz = micros_time;
                 end_us_buzz = micros_time + *((uint16_t *)&buff[3]) * ((unsigned long)1000);
+                buzzer_start(ampBuzz, freqBuzz);            // start buzzer with hardware PWM
                 buzz_state = true;
                 break;
             }
             case 'c':                                       // combination of Buzzer and Vibration1
             {
+                // Vibration 1
                 ampVib1 = buff[0];                          // read the amplitude of the vibration1
                 uint16_t freqVib1 = *((uint16_t *)&buff[1]); // read the frequency (2 bytes)
                 periodVib1 = (freqVib1 > 0) ? (1000000 / freqVib1) : 0; // calculate the period in microseconds
                 start_us_vib1 = micros_time;
                 end_us_vib1 = micros_time + *((uint16_t *)&buff[3]) * ((unsigned long)1000);
+                vib1_state = true;
+                // Buzzer
                 ampBuzz = buff[5];                          // read the amplitude of the buzzer
-                uint16_t freqBuzz = *((uint16_t *)&buff[6]); // read the frequency (2 bytes)
-                periodBuzz = (freqBuzz > 0) ? (1000000 / freqBuzz) : 0; // calculate the period in microseconds
+                freqBuzz = *((uint16_t *)&buff[6]);         // read the frequency (2 bytes)
                 start_us_buzz = micros_time;
                 end_us_buzz = micros_time + *((uint16_t *)&buff[8]) * ((unsigned long)1000);
-                vib1_state = true;
+                buzzer_start(ampBuzz, freqBuzz);            // start buzzer with hardware PWM
                 buzz_state = true;
                 break;
             }
