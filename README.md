@@ -84,6 +84,8 @@ Or use GitHub Actions: push a tag (`git tag v1.0.0 && git push --tags`) to autom
 
 ## Experiment Protocol (JSON)
 
+For detailed protocol documentation, see [userManualGUI.md](userManualGUI.md).
+
 Protocols are **case-insensitive** - `"type": "sequence"` works the same as `"Type": "Sequence"`.
 
 ### Rule Types
@@ -192,6 +194,20 @@ Located in `code/teensyScript/`. Flash using Arduino IDE or PlatformIO with Teen
 cd app/python
 python -m unittest discover tests/
 ```
+
+## Changelog
+
+### v1.1.0 (2026-01-30)
+- **Randomized_sequence**: New rule type for counterbalanced experiments with `Max_consecutive` constraint
+- **Case-insensitive protocol**: JSON field names and types now accept any case
+- **Cross-platform builds**: GitHub Actions workflow for Windows, macOS, and Linux executables
+- **Improved connection handling**: Better disconnection detection and UI recovery on reconnect
+- **Firmware updates**: Hardware PWM for buzzer (better high-frequency performance), 16-bit frequency support
+- **Config reorganization**: Clearer example files (`example_*.json`)
+
+### v1.0.0
+- Initial release with basic vibration and buzzer control
+- Sequence, Delay, and Dropout_sequence rule types
 
 ## License
 
