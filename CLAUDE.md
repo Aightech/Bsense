@@ -34,6 +34,22 @@ cd app/python
 python -m unittest discover tests/
 ```
 
+### Building Standalone Executables
+
+**Local build** (builds for current OS only):
+```bash
+cd app/python
+./build.sh        # Linux/macOS
+build.bat         # Windows
+```
+
+**Automated multi-OS builds** via GitHub Actions:
+1. Tag a release: `git tag v1.0.0 && git push --tags`
+2. GitHub Actions builds for Windows, macOS, and Linux automatically
+3. Download executables from the GitHub Releases page
+
+Note: PyInstaller cannot cross-compile. To build for Windows from Linux, use the GitHub Actions workflow or a Windows VM.
+
 ### Firmware
 Compile with Arduino IDE or VS Code Arduino extension. Target boards: Arduino Mega 2560 or Teensy 4.0/4.1.
 
@@ -95,5 +111,7 @@ Both use same serial protocol and PWM for motor/buzzer control.
 | `app/python/core/arduino_communication.py` | Serial communication |
 | `app/python/ui/main_window.py` | GUI implementation |
 | `app/python/config/*.json` | Experiment definitions |
+| `app/python/bsense.spec` | PyInstaller build configuration |
+| `.github/workflows/build.yml` | GitHub Actions multi-OS build |
 | `code/teensyA/teensyA.ino` | Teensy firmware |
 | `userManualGUI.md` | JSON protocol format specification |
